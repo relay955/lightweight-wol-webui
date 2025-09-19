@@ -11,12 +11,7 @@ const config = {
             pages: 'static',
             assets: 'static',
             fallback: 'index.html'
-        }),
-        prerender: {
-            entries: [
-                '/'
-            ]
-        }
+        })
     }
 };
 
