@@ -19,5 +19,5 @@ fn rocket() -> _ {
     rocket::build()
         // .mount("/api", routes![todos])
         .attach(cors)
-        .mount("/", FileServer::from("dist"))
+        .mount("/", FileServer::from("./static"))
 }
