@@ -1,8 +1,13 @@
+mod db;
+mod error;
+
 #[macro_use] extern crate rocket;
 
 use rocket::fs::FileServer;
 use rocket::http::Method;
+use rocket::serde::{Deserialize, Serialize};
 use rocket_cors::{AllowedOrigins, CorsOptions};
+use rocket_db_pools::Database;
 
 #[get("/")]
 fn index() -> &'static str {

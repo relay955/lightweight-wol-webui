@@ -1,0 +1,5 @@
+[default]
+secret_key = "zo9UdDftjF8OgUiiTNH49Z58yLNsHxko"  # Private cookie 암호화에 필요
+
+[default.databases.sqlite]
+url = "sqlite://app.db"

@@ -6,3 +6,16 @@ edition = "2024"
 [dependencies]
 rocket = "0.5.1"
 rocket_cors = "0.6"
+rocket_db_pools = { version = "0.2.0", features = ["sqlx_sqlite"] }  # Rocket의 DB 풀
+serde = { version = "1.0.225", features = ["derive"] }
+serde_json = "1.0.145"
+
+# 비밀번호 해시
+argon2 = "0.5.3"
+rand_core = "0.6.4"
+password-hash = "0.5.0"
+
+# SQLx (런타임: async-std or tokio 중 택1 / Rocket은 tokio 사용)
+sqlx = { version = "0.7.4", features = ["runtime-tokio", "macros", "sqlite"] }
+time = "0.3.43"
+thiserror = "1.0.69"
