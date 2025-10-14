@@ -1,0 +1,9 @@
+### GET request to example server
+POST http://localhost:8000/api/join
+Content-Type: application/json
+
+{
+  "user_name": "test_user",
+  "password": "password123"
+}
+###
