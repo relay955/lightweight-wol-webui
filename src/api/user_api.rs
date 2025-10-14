@@ -6,9 +6,10 @@ use argon2::{
     Argon2,
 };
 use rocket::http::{Cookie, CookieJar, Status};
+use crate::auth::AuthUser;
 use crate::db::{Db, user::{User, UserOperations}};
 use crate::error::{PredefinedApiError, SystemError};
-use crate::jwt::create_jwt;
+use crate::jwt::{create_jwt, verify_jwt};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -56,7 +57,7 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) ->
         .map_err(|_| SystemError::APIError(422, 0, "아이디 또는 비밀번호가 일치하지 않습니다".to_string()))?;
 
     // JWT 토큰 생성
-    let token = create_jwt(&user.user_name)?;
+    let token = create_jwt(&user)?;
 
     // 쿠키에 토큰 저장
     cookies.add(Cookie::build(("accessToken", token))
@@ -66,4 +67,21 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) ->
         .path("/"));
 
     Ok(Status::Ok)
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct ProfileRes {
+    pub user_name: String,
+}
+
+#[get("/profile")]
+pub async fn profile(db: &Db, auth:AuthUser) -> Result<Json<ProfileRes>, SystemError> {
+    // 사용자 조회
+    let user = User::get_by_user_name(&db.0, auth.user_name.as_str())
+        .await?.ok_or(PredefinedApiError::NotFound.get())?;
+
+    Ok(Json(ProfileRes {
+        user_name: user.user_name,
+    }))
 }
