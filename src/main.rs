@@ -1,6 +1,7 @@
 mod db;
 mod api;
 mod error;
+mod jwt;
 
 #[macro_use] extern crate rocket;
 
@@ -27,7 +28,7 @@ fn rocket() -> _ {
         .to_cors().unwrap();
 
     rocket::build()
-        .mount("/api", routes![api::user_api::join])
+        .mount("/api", routes![api::user_api::join, api::user_api::login])
         .attach(Db::init()) // DB 풀 초기화
         .attach(AdHoc::try_on_ignite("Run DB Migrations", |rocket| async {
             let db = match Db::fetch(&rocket){

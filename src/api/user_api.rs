@@ -2,12 +2,13 @@
 use rocket::serde::{json::Json,Deserialize, Serialize};
 use rocket::State;
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use rocket::http::Status;
+use rocket::http::{Cookie, CookieJar, Status};
 use crate::db::{Db, user::{User, UserOperations}};
 use crate::error::{PredefinedApiError, SystemError};
+use crate::jwt::create_jwt;
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -18,6 +19,11 @@ pub struct JoinReq {
 
 #[post("/join", data = "<request>")]
 pub async fn join(db: &Db, request: Json<JoinReq>) -> Result<Status, SystemError> {
+    // username 중복 확인
+    if User::get_by_user_name(&db.0, &request.user_name).await?.is_some() {
+        return Err(PredefinedApiError::Duplicated.get());
+    }
+    
     // 비밀번호 해싱
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
@@ -26,5 +32,38 @@ pub async fn join(db: &Db, request: Json<JoinReq>) -> Result<Status, SystemError
 
     // DB에 사용자 저장
     User::insert(&db.0, &request.user_name, &password_hash.to_string()).await?;
+    Ok(Status::Ok)
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct LoginReq {
+    pub user_name: String,
+    pub password: String,
+}
+
+#[post("/login", data = "<request>")]
+pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) -> Result<Status, SystemError> {
+    // 사용자 조회
+    let user = User::get_by_user_name(&db.0, &request.user_name)
+        .await?.ok_or(PredefinedApiError::NotFound.get())?;
+
+    // 비밀번호 검증
+    let argon2 = Argon2::default();
+    let parsed_hash = argon2::PasswordHash::new(&user.password)?;
+
+    argon2.verify_password(request.password.as_bytes(), &parsed_hash)
+        .map_err(|_| SystemError::APIError(422, 0, "아이디 또는 비밀번호가 일치하지 않습니다".to_string()))?;
+
+    // JWT 토큰 생성
+    let token = create_jwt(&user.user_name)?;
+
+    // 쿠키에 토큰 저장
+    cookies.add(Cookie::build(("accessToken", token))
+        .http_only(true)
+        .secure(false) // 개발 환경에서는 false, 프로덕션에서는 true로 변경
+        .same_site(rocket::http::SameSite::Lax)
+        .path("/"));
+
     Ok(Status::Ok)
 }

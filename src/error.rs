@@ -1,4 +1,5 @@
 use std::num::ParseIntError;
+use rocket::form::FromForm;
 use rocket::response::{status, Responder};
 use rocket::serde::json::Json;
 use rocket::yansi::Paint;
@@ -7,14 +8,13 @@ use thiserror::Error;
 
 #[derive(serde::Serialize)]
 pub struct ApiErrorFormat {
-    http_status: u16,
     code: u16,
     message: String
 }
 
 impl ApiErrorFormat {
-    pub fn new(http_status:u16, code:u16, message: impl Into<String>) -> Self {
-        Self { http_status: http_status, code, message: message.into() }
+    pub fn new(code:u16, message: impl Into<String>) -> Self {
+        Self { code, message: message.into() }
     }
 }
 
@@ -42,12 +42,15 @@ impl From<password_hash::Error> for SystemError {
 
 impl<'r> Responder<'r, 'static> for SystemError {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+        let mut http_status_code:u16 = 500;
         let json = match self {
-            SystemError::APIError(http_status, code, message) => 
-                Json(ApiErrorFormat::new(http_status, code, message)),
-            _ => Json(ApiErrorFormat::new(500, 0, SystemError::to_string(&self)))
+            SystemError::APIError(http_status, code, message) => {
+                http_status_code = http_status;
+                Json(ApiErrorFormat::new(code, message))
+            }
+            _ => Json(ApiErrorFormat::new(0, SystemError::to_string(&self)))
         };
-        status::Custom(rocket::http::Status::from_code(json.code).unwrap(), json).respond_to(req)
+        status::Custom(rocket::http::Status::from_code(http_status_code).unwrap(), json).respond_to(req)
     }
 }
 
@@ -57,15 +60,17 @@ pub enum PredefinedApiError {
     NotFound,
     BadRequest,
     InternalServerError,
+    Duplicated,
 }
 
 impl PredefinedApiError {
-    pub fn get(self) -> ApiErrorFormat {
+    pub fn get(self) -> SystemError {
         match self {
-            PredefinedApiError::Unauthorized => ApiErrorFormat::new(401, 0, "인증되지 않은 요청입니다"),
-            PredefinedApiError::NotFound => ApiErrorFormat::new(404, 0, "요청한 자원을 찾을 수 없습니다"),
-            PredefinedApiError::BadRequest => ApiErrorFormat::new(400, 0, "잘못된 요청입니다"),
-            PredefinedApiError::InternalServerError => ApiErrorFormat::new(500, 0, "서버 내부 오류"),
+            PredefinedApiError::Unauthorized => SystemError::APIError(401, 1, "인증되지 않은 요청입니다.".to_string()),
+            PredefinedApiError::NotFound => SystemError::APIError(422, 2, "해당 항목이 없습니다.".to_string()),
+            PredefinedApiError::BadRequest => SystemError::APIError(400, 3, "잘못된 요청입니다".to_string()),
+            PredefinedApiError::InternalServerError => SystemError::APIError(500, 4, "서버 내부 오류".to_string()),
+            PredefinedApiError::Duplicated => SystemError::APIError(422, 5, "해당 항목이 이미 존재합니다.".to_string()),
         }
     }
 }

@@ -4,7 +4,8 @@ use crate::db::is_exist_tables;
 
 #[async_trait::async_trait]
 pub trait UserOperations {
-    async fn get(pool: &SqlitePool, id: i64) -> Result<User, sqlx::Error>;
+    async fn get(pool: &SqlitePool, id: i64) -> Result<Option<User>, sqlx::Error>;
+    async fn get_by_user_name(pool: &SqlitePool, user_name: &str) -> Result<Option<User>, sqlx::Error>;
     async fn insert(pool: &SqlitePool, user_name: &str, password: &str) -> Result<User, sqlx::Error>;
     async fn update(&self, pool: &SqlitePool) -> Result<(), sqlx::Error>;
 }
@@ -19,10 +20,17 @@ pub struct User{
 
 #[async_trait::async_trait]
 impl UserOperations for User {
-    async fn get(pool: &SqlitePool, id: i64) -> Result<User, sqlx::Error> {
+    async fn get(pool: &SqlitePool, id: i64) -> Result<Option<User>, sqlx::Error> {
         sqlx::query_as::<_, User>("SELECT id, user_name, password FROM user WHERE id = ?")
             .bind(id)
-            .fetch_one(pool)
+            .fetch_optional(pool)
+            .await
+    }
+
+    async fn get_by_user_name(pool: &SqlitePool, user_name: &str) -> Result<Option<User>, sqlx::Error> {
+        sqlx::query_as::<_, User>("SELECT id, user_name, password FROM user WHERE user_name = ?")
+            .bind(user_name)
+            .fetch_optional(pool)
             .await
     }
 
