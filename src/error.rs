@@ -1,15 +1,12 @@
-use std::num::ParseIntError;
-use rocket::form::FromForm;
 use rocket::response::{status, Responder};
 use rocket::serde::json::Json;
 use rocket::yansi::Paint;
-use serde_json::json;
 use thiserror::Error;
 
 #[derive(serde::Serialize)]
 pub struct ApiErrorFormat {
-    code: u16,
-    message: String
+    pub code: u16,
+    pub message: String
 }
 
 impl ApiErrorFormat {
@@ -61,6 +58,7 @@ pub enum PredefinedApiError {
     BadRequest,
     InternalServerError,
     Duplicated,
+    TokenExpired,
 }
 
 impl PredefinedApiError {
@@ -71,6 +69,7 @@ impl PredefinedApiError {
             PredefinedApiError::BadRequest => SystemError::APIError(400, 3, "잘못된 요청입니다".to_string()),
             PredefinedApiError::InternalServerError => SystemError::APIError(500, 4, "서버 내부 오류".to_string()),
             PredefinedApiError::Duplicated => SystemError::APIError(422, 5, "해당 항목이 이미 존재합니다.".to_string()),
+            PredefinedApiError::TokenExpired => SystemError::APIError(422, 6, "토큰이 만료되었습니다.".to_string()),
         }
     }
 }

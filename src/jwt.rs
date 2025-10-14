@@ -1,23 +1,26 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rocket::serde::{Deserialize, Serialize};
+use crate::db::user::User;
 use crate::error::SystemError;
 
 const JWT_SECRET: &[u8] = b"b3f5c7a1d9e24f6b8c1a2d3e4f5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3 ";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String, // user_name
+    pub sub: i64, // user_name
     pub exp: usize,  // expiration time
+    pub user_name: String,
 }
 
-pub fn create_jwt(user_name: &str) -> Result<String, SystemError> {
+pub fn create_jwt(user: &User) -> Result<String, SystemError> {
     let expiration = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::hours(24))
         .expect("valid timestamp")
         .timestamp() as usize;
 
     let claims = Claims {
-        sub: user_name.to_owned(),
+        sub: user.id,
+        user_name: user.user_name.clone(),
         exp: expiration,
     };
 
