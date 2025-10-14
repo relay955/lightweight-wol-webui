@@ -1,4 +1,5 @@
 pub mod user;
+mod token;
 
 use std::result;
 use rocket::serde::{Deserialize, Serialize};
@@ -27,5 +28,15 @@ pub async fn create_tables(db: &Db) -> Result<(), SystemError> {
     )
     .execute(&db.0)
     .await?;
+
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS token (
+            id INTEGER PRIMARY KEY,
+            refresh_token VARCHAR(20) NOT NULL,
+            expire_date datetime NOT NULL
+        )"#,
+    )
+        .execute(&db.0)
+        .await?;
     Ok(())
 }

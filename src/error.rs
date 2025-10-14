@@ -53,7 +53,7 @@ impl<'r> Responder<'r, 'static> for SystemError {
 
 #[derive(Debug, Clone, Copy)]
 pub enum PredefinedApiError {
-    Unauthorized,
+    Forbidden,
     NotFound,
     BadRequest,
     InternalServerError,
@@ -64,7 +64,7 @@ pub enum PredefinedApiError {
 impl PredefinedApiError {
     pub fn get(self) -> SystemError {
         match self {
-            PredefinedApiError::Unauthorized => SystemError::APIError(401, 1, "인증되지 않은 요청입니다.".to_string()),
+            PredefinedApiError::Forbidden => SystemError::APIError(403, 1, "권한이 없습니다.".to_string()),
             PredefinedApiError::NotFound => SystemError::APIError(422, 2, "해당 항목이 없습니다.".to_string()),
             PredefinedApiError::BadRequest => SystemError::APIError(400, 3, "잘못된 요청입니다".to_string()),
             PredefinedApiError::InternalServerError => SystemError::APIError(500, 4, "서버 내부 오류".to_string()),
