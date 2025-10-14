@@ -2,14 +2,6 @@ use rocket::serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use crate::db::is_exist_tables;
 
-#[async_trait::async_trait]
-pub trait UserOperations {
-    async fn get(pool: &SqlitePool, id: i64) -> Result<Option<User>, sqlx::Error>;
-    async fn get_by_user_name(pool: &SqlitePool, user_name: &str) -> Result<Option<User>, sqlx::Error>;
-    async fn insert(pool: &SqlitePool, user_name: &str, password: &str) -> Result<User, sqlx::Error>;
-    async fn update(&self, pool: &SqlitePool) -> Result<(), sqlx::Error>;
-}
-
 #[derive(Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct User{
     pub id:i64,
@@ -17,6 +9,13 @@ pub struct User{
     pub password:String,
 }
 
+#[async_trait::async_trait]
+pub trait UserOperations {
+    async fn get(pool: &SqlitePool, id: i64) -> Result<Option<User>, sqlx::Error>;
+    async fn get_by_user_name(pool: &SqlitePool, user_name: &str) -> Result<Option<User>, sqlx::Error>;
+    async fn insert(pool: &SqlitePool, user_name: &str, password: &str) -> Result<User, sqlx::Error>;
+    async fn update(&self, pool: &SqlitePool) -> Result<(), sqlx::Error>;
+}
 
 #[async_trait::async_trait]
 impl UserOperations for User {
