@@ -9,6 +9,8 @@ pub enum ApiError {
     Skip,
     #[error("sql")]
     Sql(#[from] sqlx::Error),
+    #[error("rocket")]
+    Rocket(#[from] rocket::Error),
 }
 
 impl serde::Serialize for ApiError {

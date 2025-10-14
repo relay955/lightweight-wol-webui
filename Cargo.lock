@@ -972,6 +972,7 @@ name = "lightweight-wol-webui"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "async-trait",
  "password-hash",
  "rand_core",
  "rocket",
