@@ -22,11 +22,11 @@
     isLoading = false;
   }, () => isLoading = false);
 
-  // 장치 삭제
+  // Delete device
   const deleteDevice = (id: number) => showToastOnError(async () => {
-    if (!confirm('이 장치를 삭제하시겠습니까?')) return;
+    if (!confirm('Are you sure you want to delete this device?')) return;
     await axios.delete(`/devices/${id}`);
-    toast.push('장치가 삭제되었습니다.', {
+    toast.push('Device has been deleted.', {
       theme: {
         '--toastBackground': '#1a1a1a',
         '--toastColor': '#ffffff',
@@ -47,35 +47,35 @@
     <div class="header-section">
       <div class="title-area">
         <h1 class="main-title">WOL Devices</h1>
-        <p class="main-subtitle">Wake-on-LAN 장치 관리</p>
+        <p class="main-subtitle">Wake-on-LAN Device Management</p>
       </div>
       <button class="add-button action-button">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        장치 추가
+        Add Device
       </button>
     </div>
 
-    <!-- 로딩 상태 -->
+    <!-- Loading State -->
     {#if isLoading}
       <div class="checking-container">
         <span class="spinner large"></span>
-        <p class="checking-text">장치 목록을 불러오는 중...</p>
+        <p class="checking-text">Loading device list...</p>
       </div>
     {:else if devices.length === 0}
-      <!-- 빈 상태 -->
+      <!-- Empty State -->
       <div class="empty-state">
         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
           <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
         </svg>
-        <h3>등록된 장치가 없습니다</h3>
-        <p>새로운 WOL 장치를 추가해보세요.</p>
+        <h3>No devices registered</h3>
+        <p>Add a new WOL device to get started.</p>
       </div>
     {:else}
-      <!-- 장치 리스트 -->
+      <!-- Device List -->
       <div class="devices-grid">
         {#each devices as device (device.id)}
           <div class="device-card">
@@ -98,13 +98,13 @@
               </div>
             </div>
             <div class="device-actions">
-              <button class="icon-button edit-button" title="수정">
+              <button class="icon-button edit-button" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button class="icon-button delete-button" title="삭제" onclick={() => deleteDevice(device.id)}>
+              <button class="icon-button delete-button" title="Delete" onclick={() => deleteDevice(device.id)}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>

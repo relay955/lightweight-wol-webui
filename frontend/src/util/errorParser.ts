@@ -8,21 +8,21 @@ export const parseErrorMessageToOneLine = (e: any, fieldmap: { [index: string]: 
     if (typeof e === "string") return e;
     if (!e.response || !e.response.status) {
       console.log(e)
-      if (e.message) return `에러가 발생했습니다. (${e.message})`
-      else return "에러가 발생했습니다."
+      if (e.message) return `An error occurred. (${e.message})`
+      else return "An error occurred."
     }
 
-    if (e.response.status === 403) return "권한이 없습니다."
-    if (e.response.status === 500) return "에러가 발생했습니다. 잠시 후 다시 시도해주세요."
+    if (e.response.status === 403) return "Permission denied."
+    if (e.response.status === 500) return "An error occurred. Please try again later."
 
     const detail = e.response.data.detail
     if (!Array.isArray(detail)) return e.response.data.msg;
 
-    if (detail.length == 0) return "검증에 실패했습니다.";
+    if (detail.length == 0) return "Validation failed.";
     return detail[0].msg;
   } catch (e) {
     console.log(e)
-    return "에러가 발생했습니다."
+    return "An error occurred."
   }
 }
 
