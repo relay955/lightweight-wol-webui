@@ -4,6 +4,6 @@
   import {goto} from "$app/navigation";
 
   onMount(() => {
-    goto(!checkIsAuthenticated() ? "/login" : "/main/pre-info");
+    goto(!checkIsAuthenticated() ? "/login" : "/main");
   })
 </script>
