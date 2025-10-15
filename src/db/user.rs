@@ -15,6 +15,7 @@ pub trait UserOperations {
     async fn get_by_user_name(pool: &SqlitePool, user_name: &str) -> Result<Option<User>, sqlx::Error>;
     async fn insert(pool: &SqlitePool, user_name: &str, password: &str) -> Result<User, sqlx::Error>;
     async fn update(&self, pool: &SqlitePool) -> Result<(), sqlx::Error>;
+    async fn has_any_user(pool: &SqlitePool) -> Result<bool, sqlx::Error>;
 }
 
 #[async_trait::async_trait]
@@ -58,5 +59,13 @@ impl UserOperations for User {
             .await?;
 
         Ok(())
+    }
+
+    async fn has_any_user(pool: &SqlitePool) -> Result<bool, sqlx::Error> {
+        let result: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user")
+            .fetch_one(pool)
+            .await?;
+
+        Ok(result.0 > 0)
     }
 }
