@@ -1,13 +1,23 @@
-use crate::db::user::UserOperations;
+use crate::db::token::{Token, TokenOperations};
+use crate::db::user::{User, UserOperations};
+use crate::db::Db;
 use crate::error::SystemError;
-use crate::jwt::verify_jwt;
-use rocket::http::Status;
+use crate::jwt::{create_jwt, verify_jwt};
+use chrono::{Duration, Utc};
+use rocket::http::{Cookie, Status};
 use rocket::outcome::Outcome::{Error, Success};
 use rocket::request::{FromRequest, Outcome, Request};
+use rocket::State;
+use uuid::Uuid;
 
 pub struct AuthUser {
     pub id: i64,
     pub user_name: String,
+}
+
+pub struct TokenCookies {
+    pub access_token: String,
+    pub refresh_token: String,
 }
 
 #[rocket::async_trait]
@@ -15,16 +25,112 @@ impl<'r> FromRequest<'r> for AuthUser {
     type Error = SystemError;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, SystemError> {
-        let token = match request.cookies().get("accessToken").map(|c| c.value().to_string()){
-            Some(t) => t,
-            None => return Error((Status::Unauthorized,SystemError::APIError(401, 0, "로그인이 필요합니다".to_string())))
+        let db = match request.guard::<&Db>().await {
+            Success(db) => db,
+            _ => return create_outcome_error(Status::InternalServerError,"데이터베이스 연결 실패"),       
         };
-        
-        let claims = match verify_jwt(&token) {
-            Ok(c) => c,
-            Err(e) => return Error((Status::Unauthorized,SystemError::APIError(401, 0, "토큰이 만료되었습니다.".to_string()))),
-        };
-        
-        Success(AuthUser { id:claims.sub, user_name: claims.user_name })
+
+        let access_token = request.cookies().get("accessToken")
+            .map(|c| c.value().to_string());
+        let refresh_token = request.cookies().get("refreshToken")
+            .map(|c| c.value().to_string());
+
+        if access_token.is_none() {
+            return create_outcome_error(Status::Unauthorized,"로그인이 필요합니다.");
+        }
+
+        let token = access_token.unwrap();
+
+        match verify_jwt(&token) {
+            Ok(claims) => Success(AuthUser {
+                id: claims.sub,
+                user_name: claims.user_name,
+            }),
+            Err(_) => {
+                // accessToken 만료시 refreshToken으로 재발급 시도
+                if let Some(refresh_token_value) = refresh_token {
+                    match do_refresh(db, &refresh_token_value, request).await {
+                        Ok(auth_user) => Success(auth_user),
+                        Err(e) => Error((Status::Unauthorized, e)),
+                    }
+                } else {
+                    create_outcome_error(Status::Unauthorized,"토큰이 만료되었습니다.")
+                }
+            }
+        }
     }
 }
+
+async fn do_refresh(db: &Db, refresh_token: &str, request: &Request<'_>) 
+    -> Result<AuthUser, SystemError> {
+    println!("refresh 실행");
+    // refreshToken으로 DB에서 토큰 조회
+    let mut token = match Token::get_by_refresh_token(db, refresh_token.to_string()).await {
+        Ok(Some(token)) => token,
+        Ok(None) => {
+            return Err(SystemError::APIError(401, 0, "유효하지 않은 리프레시 토큰입니다.".to_string()));
+        }
+        Err(e) => {
+            return Err(SystemError::APIError(500, 0, "토큰 조회 실패".to_string()));
+        }
+    };
+
+    // 유저 조회
+    let user = match User::get(db, token.user_id).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            return Err(SystemError::APIError(401, 0, "유저를 찾을 수 없습니다.".to_string()));
+        }
+        Err(_) => {
+            return Err(SystemError::APIError(500, 0, "유저 조회 실패".to_string()));
+        }
+    };
+
+    // 토큰 만료 검사
+    let expire_at = chrono::NaiveDateTime::parse_from_str(&token.expire_at, "%Y-%m-%d %H:%M:%S")
+        .map_err(|_| SystemError::APIError(500, 0, "날짜 해석 실패".to_string()))?;
+    let expire_at = chrono::DateTime::<Utc>::from_naive_utc_and_offset(expire_at, Utc);
+    let now = Utc::now();
+
+    if now > expire_at {
+        // refreshToken도 만료됨
+        Token::delete(db, token.id).await.ok();
+        return Err(SystemError::APIError(401, 0, "리프레시 토큰이 만료되었습니다.".to_string()));
+    }
+
+    // refreshToken이 만료 7일 이전일 경우 refreshToken 갱신
+    if now > expire_at - Duration::days(7) {
+        let new_refresh_token = generate_refresh_token(&user);
+        token.refresh_token = new_refresh_token.refresh_token;
+        token.expire_at = new_refresh_token.expire_at;
+
+        Token::update(db, &token).await
+            .map_err(|_| SystemError::APIError(500, 0, "토큰 갱신 실패".to_string()))?;
+    }
+
+    // 새로운 accessToken 생성
+    let new_access_token = create_jwt(&user)
+        .map_err(|_| SystemError::APIError(500, 0, "JWT 생성 실패".to_string()))?;
+
+    // 쿠키 설정 (응답에 쿠키 추가)
+    request.cookies().add(Cookie::build(("accessToken", new_access_token.clone())));
+    request.cookies().add(Cookie::build(("refreshToken", token.refresh_token.clone())));
+
+    Ok(AuthUser {
+        id: user.id,
+        user_name: user.user_name,
+    })
+}
+
+pub fn generate_refresh_token(user: &User) -> Token {
+    Token {
+        id: 0,
+        user_id: user.id,
+        refresh_token: format!("{}{}", Uuid::new_v4(), Uuid::new_v4()),
+        expire_at: (Utc::now() + Duration::days(14)).format("%Y-%m-%d %H:%M:%S").to_string(),
+    }
+}
+fn create_outcome_error(status:Status,str:&str) -> Outcome<AuthUser, SystemError> {
+    Error((status, SystemError::APIError(status.code, 0, str.to_string())))
+}
+

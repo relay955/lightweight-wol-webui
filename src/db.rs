@@ -1,7 +1,6 @@
 pub mod user;
-mod token;
+pub(crate) mod token;
 
-use std::result;
 use rocket::serde::{Deserialize, Serialize};
 use rocket_db_pools::Database;
 use crate::error::SystemError;
@@ -21,7 +20,7 @@ pub async fn is_exist_tables(db: &Db) -> Result<bool, SystemError> {
 pub async fn create_tables(db: &Db) -> Result<(), SystemError> {
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS user (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_name VARCHAR(20) NOT NULL,
             password VARCHAR(255) NOT NULL
         )"#,
@@ -31,9 +30,10 @@ pub async fn create_tables(db: &Db) -> Result<(), SystemError> {
 
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS token (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             refresh_token VARCHAR(20) NOT NULL,
-            expire_date datetime NOT NULL
+            expire_at datetime NOT NULL
         )"#,
     )
         .execute(&db.0)

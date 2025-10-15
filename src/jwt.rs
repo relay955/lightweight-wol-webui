@@ -4,6 +4,7 @@ use crate::db::user::User;
 use crate::error::SystemError;
 
 const JWT_SECRET: &[u8] = b"b3f5c7a1d9e24f6b8c1a2d3e4f5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3 ";
+const EXPIRATION_MINUTES: i64 = 1;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -14,7 +15,7 @@ pub struct Claims {
 
 pub fn create_jwt(user: &User) -> Result<String, SystemError> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::hours(24))
+        .checked_add_signed(chrono::Duration::minutes(EXPIRATION_MINUTES))
         .expect("valid timestamp")
         .timestamp() as usize;
 
