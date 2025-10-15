@@ -50,8 +50,8 @@
       </svg>
     </div>
 
-    <h1 class="page-title">초기 계정 설정</h1>
-    <p class="page-subtitle">관리자 계정을 생성하여 시작하세요</p>
+    <h1 class="page-title">Initial Account Setup</h1>
+    <p class="page-subtitle">Create an administrator account to get started</p>
 
     <form class="common-form" on:submit|preventDefault={onClickCreate}>
       <div class="form-group">
@@ -110,11 +110,11 @@
         <line x1="12" y1="16" x2="12" y2="12"/>
         <line x1="12" y1="8" x2="12.01" y2="8"/>
       </svg>
-      <span>이 계정은 시스템의 최초 관리자 계정입니다. 안전한 비밀번호를 설정해주세요.</span>
+      <span>This will be the first administrator account for the system. Please set a secure password.</span>
     </div>
   </div>
 </div>
 
 <style lang="scss">
-  /* 페이지별 특화 스타일이 필요한 경우 여기에 추가 */
+  @import '../../globalstyles/auth';
 </style>
