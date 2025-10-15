@@ -6,12 +6,12 @@ use thiserror::Error;
 #[derive(serde::Serialize)]
 pub struct ApiErrorFormat {
     pub code: u16,
-    pub message: String
+    pub msg: String
 }
 
 impl ApiErrorFormat {
     pub fn new(code:u16, message: impl Into<String>) -> Self {
-        Self { code, message: message.into() }
+        Self { code, msg: message.into() }
     }
 }
 
