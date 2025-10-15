@@ -12,6 +12,18 @@ use crate::db::token::{Token, TokenOperations};
 use crate::error::{PredefinedApiError, SystemError};
 use crate::jwt::{create_jwt, verify_jwt};
 
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CheckFirstUserRes {
+    pub has_user: bool,
+}
+
+#[get("/check-first-user")]
+pub async fn check_first_user(db: &Db) -> Result<Json<CheckFirstUserRes>, SystemError> {
+    let has_user = User::has_any_user(db).await?;
+    Ok(Json(CheckFirstUserRes { has_user }))
+}
+
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct JoinReq {
@@ -21,6 +33,11 @@ pub struct JoinReq {
 
 #[post("/join", data = "<request>")]
 pub async fn join(db: &Db, request: Json<JoinReq>) -> Result<Status, SystemError> {
+    // 이미 계정이 존재하는지 확인
+    if User::has_any_user(db).await? {
+        return Err(SystemError::APIError(403, 0, "Account already exists. Cannot create more accounts.".to_string()));
+    }
+
     // username 중복 확인
     if User::get_by_user_name(db, &request.user_name).await?.is_some() {
         return Err(PredefinedApiError::Duplicated.get());

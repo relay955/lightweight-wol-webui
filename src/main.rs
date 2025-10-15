@@ -30,7 +30,7 @@ fn rocket() -> _ {
         .to_cors().unwrap();
 
     rocket::build()
-        .mount("/api", routes![api::user_api::join, api::user_api::login, api::user_api::profile])
+        .mount("/api", routes![api::user_api::join, api::user_api::login, api::user_api::profile, api::user_api::check_first_user])
         .register("/", catchers![api::catcher::unauthorized])
         .attach(Db::init()) // DB 풀 초기화
         .attach(AdHoc::try_on_ignite("Run DB Migrations", |rocket| async {
