@@ -81,5 +81,5 @@
 </div>
 
 <style lang="scss">
-  /* 페이지별 특화 스타일이 필요한 경우 여기에 추가 */
+  @import '../../globalstyles/auth';
 </style>

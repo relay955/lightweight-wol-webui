@@ -1,0 +1,105 @@
+/* 인증 페이지 전용 스타일 */
+
+/* 공통 컨테이너 스타일 */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      repeating-linear-gradient(0deg,
+          transparent, transparent 2px,
+          rgba(0, 0, 0, 0.015) 2px,
+          rgba(0, 0, 0, 0.015) 4px
+      );
+    pointer-events: none;
+  }
+}
+
+/* 공통 카드 스타일 */
+.auth-card {
+  background: var(--color-white);
+  border-radius: 16px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.08);
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 4px;
+    background: var(--color-black);
+    border-radius: 0 0 4px 4px;
+  }
+
+  &.wide {
+    max-width: 480px;
+  }
+}
+
+/* 아이콘 래퍼 */
+.icon-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+
+  svg {
+    color: var(--color-black);
+  }
+}
+
+/* 타이틀 스타일 */
+.page-title {
+  font-size: 27px;
+  font-weight: bold;
+  color: var(--color-black);
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.page-subtitle {
+  font-size: 15px;
+  color: var(--color-dark-gray);
+  margin: 0 0 40px 0;
+  text-align: center;
+  font-weight: normal;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 40px 24px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+  }
+}
