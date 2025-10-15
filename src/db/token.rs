@@ -17,6 +17,7 @@ pub trait TokenOperations {
     async fn insert(pool: &SqlitePool, token: &Token) -> Result<(), sqlx::Error>;
     async fn get_by_refresh_token(pool: &SqlitePool, refresh_token: String) -> Result<Option<Token>, sqlx::Error>;
     async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error>;
+    async fn delete_by_user_id(pool: &SqlitePool, user_id: i64) -> Result<(), sqlx::Error>;
     async fn update(pool: &SqlitePool, token: &Token) -> Result<(), sqlx::Error>;
 }
 
@@ -42,6 +43,14 @@ impl TokenOperations for Token {
     async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
         sqlx::query("DELETE FROM token WHERE id = ?")
             .bind(id)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn delete_by_user_id(pool: &SqlitePool, user_id: i64) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM token WHERE user_id = ?")
+            .bind(user_id)
             .execute(pool)
             .await?;
         Ok(())
