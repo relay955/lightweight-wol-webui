@@ -26,7 +26,7 @@ pub fn create_jwt(user: &User) -> Result<String, SystemError> {
     };
 
     encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET))
-        .map_err(|e| SystemError::APIError(500, 0, format!("JWT 생성 실패: {}", e)))
+        .map_err(|e| SystemError::APIError(500, 0, format!("Failed to create JWT: {}", e)))
 }
 
 pub fn verify_jwt(token: &str) -> Result<Claims, SystemError> {
@@ -36,5 +36,5 @@ pub fn verify_jwt(token: &str) -> Result<Claims, SystemError> {
         &Validation::default(),
     )
     .map(|data| data.claims)
-    .map_err(|e| SystemError::APIError(401, 0, format!("유효하지 않은 토큰: {}", e)))
+    .map_err(|e| SystemError::APIError(401, 0, format!("Invalid token: {}", e)))
 }

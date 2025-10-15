@@ -64,12 +64,12 @@ pub enum PredefinedApiError {
 impl PredefinedApiError {
     pub fn get(self) -> SystemError {
         match self {
-            PredefinedApiError::Forbidden => SystemError::APIError(403, 1, "권한이 없습니다.".to_string()),
-            PredefinedApiError::NotFound => SystemError::APIError(422, 2, "해당 항목이 없습니다.".to_string()),
-            PredefinedApiError::BadRequest => SystemError::APIError(400, 3, "잘못된 요청입니다".to_string()),
-            PredefinedApiError::InternalServerError => SystemError::APIError(500, 4, "서버 내부 오류".to_string()),
-            PredefinedApiError::Duplicated => SystemError::APIError(422, 5, "해당 항목이 이미 존재합니다.".to_string()),
-            PredefinedApiError::TokenExpired => SystemError::APIError(422, 6, "토큰이 만료되었습니다.".to_string()),
+            PredefinedApiError::Forbidden => SystemError::APIError(403, 1, "Access denied".to_string()),
+            PredefinedApiError::NotFound => SystemError::APIError(422, 2, "Item not found".to_string()),
+            PredefinedApiError::BadRequest => SystemError::APIError(400, 3, "Invalid request".to_string()),
+            PredefinedApiError::InternalServerError => SystemError::APIError(500, 4, "Internal server error".to_string()),
+            PredefinedApiError::Duplicated => SystemError::APIError(422, 5, "Item already exists".to_string()),
+            PredefinedApiError::TokenExpired => SystemError::APIError(422, 6, "Token expired".to_string()),
         }
     }
 }

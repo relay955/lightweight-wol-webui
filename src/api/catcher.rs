@@ -9,5 +9,5 @@ pub fn unauthorized(req: &Request) -> Json<ApiErrorFormat> {
             return Json(ApiErrorFormat::new(*code, message.clone()));
         }
     }
-    Json(ApiErrorFormat::new(0, "로그인이 필요합니다"))
+    Json(ApiErrorFormat::new(0, "Login required"))
 }
