@@ -1,5 +1,6 @@
 pub mod user;
 pub(crate) mod token;
+pub mod device;
 
 use rocket::serde::{Deserialize, Serialize};
 use rocket_db_pools::Database;
@@ -38,5 +39,17 @@ pub async fn create_tables(db: &Db) -> Result<(), SystemError> {
     )
         .execute(&db.0)
         .await?;
+
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS device (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(255) NOT NULL,
+            mac VARCHAR(17) NOT NULL,
+            order_num INTEGER NOT NULL
+        )"#,
+    )
+        .execute(&db.0)
+        .await?;
+
     Ok(())
 }
