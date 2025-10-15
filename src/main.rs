@@ -24,6 +24,7 @@ fn index() -> &'static str {
 #[launch]
 fn rocket() -> _ {
     let cors = CorsOptions::default()
+        .allow_credentials(true)
         .allowed_origins(AllowedOrigins::all())
         .allowed_methods(vec![Method::Get, Method::Post, Method::Put, Method::Delete].into_iter().map(From::from).collect())
         .to_cors().unwrap();

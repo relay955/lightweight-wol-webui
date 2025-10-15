@@ -1,5 +1,6 @@
 [default]
 secret_key = "zo9UdDftjF8OgUiiTNH49Z58yLNsHxko"  # Private cookie 암호화에 필요
+port = 25533
 
 [default.databases.sqlite]
 url = "sqlite://app.db"
