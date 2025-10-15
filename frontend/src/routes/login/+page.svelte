@@ -20,29 +20,29 @@
 
 <div class="login-container">
   <div class="login-card">
-    <h1 class="title">로그인</h1>
-    <p class="subtitle">계정에 로그인하세요</p>
+    <h1 class="title">Lightweight WOL WebUI</h1>
+    <p class="subtitle">Authentication</p>
 
     <form class="login-form" on:submit|preventDefault={onClickLogin}>
       <div class="form-group">
-        <label for="account">아이디</label>
+        <label for="account">Username</label>
         <input 
           id="account" 
           type="text" 
           on:keydown={onKeyDown}
-          placeholder="아이디를 입력하세요" 
+          placeholder="Enter your username" 
           bind:value={user_name}
           disabled={isLoading}
         />
       </div>
 
       <div class="form-group">
-        <label for="password">비밀번호</label>
+        <label for="password">Password</label>
         <input 
           id="password" 
           type="password" 
           on:keydown={onKeyDown}
-          placeholder="비밀번호를 입력하세요" 
+          placeholder="Enter your password" 
           bind:value={password}
           disabled={isLoading}
         />
@@ -51,9 +51,9 @@
       <button class="login-button" type="button" on:click={onClickLogin} disabled={isLoading}>
         {#if isLoading}
           <span class="spinner"></span>
-          로그인 중...
+          Logging in...
         {:else}
-          로그인
+          Login
         {/if}
       </button>
     </form>

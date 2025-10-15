@@ -25,7 +25,7 @@ pub async fn join(db: &Db, request: Json<JoinReq>) -> Result<Status, SystemError
     if User::get_by_user_name(db, &request.user_name).await?.is_some() {
         return Err(PredefinedApiError::Duplicated.get());
     }
-    
+
     // 비밀번호 해싱
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
@@ -55,14 +55,14 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) ->
     let parsed_hash = argon2::PasswordHash::new(&user.password)?;
 
     argon2.verify_password(request.password.as_bytes(), &parsed_hash)
-        .map_err(|_| SystemError::APIError(422, 0, "아이디 또는 비밀번호가 일치하지 않습니다".to_string()))?;
+        .map_err(|_| SystemError::APIError(422, 0, "Username or password does not match".to_string()))?;
 
     // JWT 토큰 생성
     let access_token = create_jwt(&user)?;
-    
+
     //기존 해당 유저의 refresh토큰이 있었다면, 해당 토큰을 모두 제거
     Token::delete_by_user_id(db, user.id).await?;
-    
+
     // refresh토큰 생성
     let refresh_token = crate::auth::generate_refresh_token(&user);
     Token::insert(db, &refresh_token).await?;

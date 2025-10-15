@@ -27,7 +27,7 @@ impl<'r> FromRequest<'r> for AuthUser {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, SystemError> {
         let db = match request.guard::<&Db>().await {
             Success(db) => db,
-            _ => return create_outcome_error(Status::InternalServerError,"데이터베이스 연결 실패"),       
+            _ => return create_outcome_error(Status::InternalServerError,"Database connection failed"),       
         };
 
         let access_token = request.cookies().get("accessToken")
@@ -36,7 +36,7 @@ impl<'r> FromRequest<'r> for AuthUser {
             .map(|c| c.value().to_string());
 
         if access_token.is_none() {
-            return create_outcome_error(Status::Unauthorized,"로그인이 필요합니다.");
+            return create_outcome_error(Status::Unauthorized,"Login required");
         }
 
         let token = access_token.unwrap();
@@ -54,7 +54,7 @@ impl<'r> FromRequest<'r> for AuthUser {
                         Err(e) => Error((Status::Unauthorized, e)),
                     }
                 } else {
-                    create_outcome_error(Status::Unauthorized,"토큰이 만료되었습니다.")
+                    create_outcome_error(Status::Unauthorized,"Token expired")
                 }
             }
         }
@@ -63,15 +63,15 @@ impl<'r> FromRequest<'r> for AuthUser {
 
 async fn do_refresh(db: &Db, refresh_token: &str, request: &Request<'_>) 
     -> Result<AuthUser, SystemError> {
-    println!("refresh 실행");
+    println!("Executing refresh");
     // refreshToken으로 DB에서 토큰 조회
     let mut token = match Token::get_by_refresh_token(db, refresh_token.to_string()).await {
         Ok(Some(token)) => token,
         Ok(None) => {
-            return Err(SystemError::APIError(401, 0, "유효하지 않은 리프레시 토큰입니다.".to_string()));
+            return Err(SystemError::APIError(401, 0, "Invalid refresh token".to_string()));
         }
         Err(e) => {
-            return Err(SystemError::APIError(500, 0, "토큰 조회 실패".to_string()));
+            return Err(SystemError::APIError(500, 0, "Failed to query token".to_string()));
         }
     };
 
@@ -79,23 +79,23 @@ async fn do_refresh(db: &Db, refresh_token: &str, request: &Request<'_>)
     let user = match User::get(db, token.user_id).await {
         Ok(Some(user)) => user,
         Ok(None) => {
-            return Err(SystemError::APIError(401, 0, "유저를 찾을 수 없습니다.".to_string()));
+            return Err(SystemError::APIError(401, 0, "User not found".to_string()));
         }
         Err(_) => {
-            return Err(SystemError::APIError(500, 0, "유저 조회 실패".to_string()));
+            return Err(SystemError::APIError(500, 0, "Failed to query user".to_string()));
         }
     };
 
     // 토큰 만료 검사
     let expire_at = chrono::NaiveDateTime::parse_from_str(&token.expire_at, "%Y-%m-%d %H:%M:%S")
-        .map_err(|_| SystemError::APIError(500, 0, "날짜 해석 실패".to_string()))?;
+        .map_err(|_| SystemError::APIError(500, 0, "Failed to parse date".to_string()))?;
     let expire_at = chrono::DateTime::<Utc>::from_naive_utc_and_offset(expire_at, Utc);
     let now = Utc::now();
 
     if now > expire_at {
         // refreshToken도 만료됨
         Token::delete(db, token.id).await.ok();
-        return Err(SystemError::APIError(401, 0, "리프레시 토큰이 만료되었습니다.".to_string()));
+        return Err(SystemError::APIError(401, 0, "Refresh token expired".to_string()));
     }
 
     // refreshToken이 만료 7일 이전일 경우 refreshToken 갱신
@@ -105,12 +105,12 @@ async fn do_refresh(db: &Db, refresh_token: &str, request: &Request<'_>)
         token.expire_at = new_refresh_token.expire_at;
 
         Token::update(db, &token).await
-            .map_err(|_| SystemError::APIError(500, 0, "토큰 갱신 실패".to_string()))?;
+            .map_err(|_| SystemError::APIError(500, 0, "Failed to renew token".to_string()))?;
     }
 
     // 새로운 accessToken 생성
     let new_access_token = create_jwt(&user)
-        .map_err(|_| SystemError::APIError(500, 0, "JWT 생성 실패".to_string()))?;
+        .map_err(|_| SystemError::APIError(500, 0, "Failed to create JWT".to_string()))?;
 
     // 쿠키 설정 (응답에 쿠키 추가)
     request.cookies().add(Cookie::build(("accessToken", new_access_token.clone())));
