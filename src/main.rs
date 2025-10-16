@@ -68,7 +68,7 @@ fn build_rocket() -> rocket::Rocket<rocket::Build> {
             api::device_api::move_device, api::device_api::get_device,
             api::device_api::wake_device,
         ])
-        .register("/", catchers![api::catcher::unauthorized])
+        .register("/", catchers![api::catcher::unauthorized, api::catcher::not_found])
         .attach(Db::init()) // DB 풀 초기화
         .attach(AdHoc::try_on_ignite("Run DB Migrations", |rocket| async {
             let db = match Db::fetch(&rocket){

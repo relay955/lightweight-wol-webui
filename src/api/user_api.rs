@@ -7,7 +7,7 @@ use argon2::{
 };
 use rocket::http::{Cookie, CookieJar, Status};
 use crate::config::JwtConfig;
-use crate::module::auth::AuthUser;
+use crate::module::auth::{bulid_cookie, AuthUser};
 use crate::db::{Db, user::{User, UserOperations}};
 use crate::db::token::{Token, TokenOperations};
 use crate::error::{PredefinedApiError, SystemError};
@@ -87,8 +87,8 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, jwt_config: &State<JwtConfi
     Token::insert(db, &refresh_token).await?;
 
     // 쿠키에 토큰 저장
-    cookies.add(Cookie::build(("accessToken", access_token)));
-    cookies.add(Cookie::build(("refreshToken", refresh_token.refresh_token)));
+    cookies.add(bulid_cookie(&jwt_config,"accessToken", &access_token));
+    cookies.add(bulid_cookie(&jwt_config,"refreshToken", &refresh_token.refresh_token));
 
     Ok(Status::Ok)
 }
