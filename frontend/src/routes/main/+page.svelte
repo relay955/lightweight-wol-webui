@@ -29,6 +29,12 @@
     await loadDevices();
   })();
 
+  // Wake device
+  const wakeDevice = (id: number) => showToastOnError(async () => {
+    await axios.post(`/device/wake/${id}`);
+    toast.push('WOL packet sent.');
+  })();
+
   onMount(() => {
     loadDevices();
   });
@@ -88,6 +94,11 @@
                   </svg>
                   {device.mac}
                 </p>
+                <div class="device-wol-actions">
+                  <button class="action-button small" aria-label="Wake Device" title="Wake Device" onclick={() => wakeDevice(device.id)}>
+                    WAKE UP
+                  </button>
+                </div>
               </div>
             </div>
             <div class="device-actions">
@@ -138,7 +149,6 @@
   .main-container {
     min-height: 100vh;
     background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
-    padding: 40px 20px;
     position: relative;
 
     &::before {
@@ -169,6 +179,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-top: 20px;
     margin-bottom: 40px;
     flex-wrap: wrap;
     gap: 20px;
@@ -246,29 +257,34 @@
     .device-details {
       flex: 1;
       min-width: 0;
-    }
 
-    .device-name {
-      font-size: 18px;
-      font-weight: bold;
-      color: var(--color-black);
-      margin: 0 0 6px 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+      .device-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--color-black);
+        margin: 0 0 6px 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
-    .device-mac {
-      font-size: 13px;
-      color: var(--color-dark-gray);
-      margin: 0;
-      font-family: 'Courier New', monospace;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      .device-mac {
+        font-size: 13px;
+        color: var(--color-dark-gray);
+        margin: 0;
+        font-family: 'Courier New', monospace;
+        display: flex;
+        align-items: center;
+        gap: 6px;
 
-      svg {
-        flex-shrink: 0;
+        svg {
+          flex-shrink: 0;
+        }
+      }
+      .device-wol-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 3px;
       }
     }
 
@@ -342,7 +358,7 @@
   /* 반응형 디자인 */
   @media (max-width: 768px) {
     .main-container {
-      padding: 24px 16px;
+      padding: 0 16px;
     }
 
     .header-section {
