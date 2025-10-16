@@ -13,20 +13,13 @@
     isLoading = true;
     const res = await axios.get('/devices');
     devices = res.data;
-    isLoading = false;
   }, () => isLoading = false);
 
   // Delete device
   const deleteDevice = (id: number) => showToastOnError(async () => {
     if (!confirm('Are you sure you want to delete this device?')) return;
-    await axios.delete(`/devices/${id}`);
-    toast.push('Device has been deleted.', {
-      theme: {
-        '--toastBackground': '#1a1a1a',
-        '--toastColor': '#ffffff',
-        '--toastBarBackground': '#4caf50'
-      }
-    });
+    await axios.delete(`/device/${id}`);
+    toast.push('Device has been deleted.');
     await loadDevices();
   })();
 
