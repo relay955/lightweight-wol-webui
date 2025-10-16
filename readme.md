@@ -10,6 +10,7 @@ a simple windows web ui for Wake-on-LAN
 
 ### Execution
 Extract the uploaded zip file from releases and run the exe.
+default port is 25533(http://localhost:25533).
 
 ### Configuration
 Port number can be modified in the configuration file (Rocket.toml) if needed.
