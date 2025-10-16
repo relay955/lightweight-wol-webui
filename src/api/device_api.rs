@@ -2,10 +2,20 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::http::Status;
 use serde_json::json;
 use serde_json::ser::CharEscape::CarriageReturn;
+use lazy_static::lazy_static;
+use validator::Validate;
+use crate::api::validate_request;
 use crate::auth::AuthUser;
 use crate::db::Db;
 use crate::db::device::{Device, DeviceOperations, MoveDirection};
 use crate::error::{PredefinedApiError, SystemError};
+
+// MAC 주소 정규식 (일반적인 형식: AA:BB:CC:DD:EE:FF 또는 AA-BB-CC-DD-EE-FF)
+lazy_static::lazy_static! {
+    static ref MAC_ADDRESS_REGEX: regex::Regex = regex::Regex::new(
+        r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+    ).unwrap();
+}
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -46,17 +56,21 @@ pub async fn get_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Json<GetDev
     Ok(Json(device_res))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 #[serde(crate = "rocket::serde")]
 pub struct PostDeviceReq {
-    pub id:Option<i64>,
+    pub id: Option<i64>,
+    #[validate(length(min = 1, message = "이름은 공백일 수 없습니다"))]
     pub name: String,
+    #[validate(regex(path = "MAC_ADDRESS_REGEX", message = "올바른 MAC 주소 형식이 아닙니다 (예: AA:BB:CC:DD:EE:FF)"))]
     pub mac: String,
 }
 
 #[post("/device", data = "<req>")]
 pub async fn create_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>,
 ) -> Result<Status, SystemError> {
+    validate_request(&*req)?;
+
     let max_order = Device::get_max_order_num(&db.0).await?;
 
     let device = Device{
@@ -73,9 +87,12 @@ pub async fn create_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>,
 #[put("/device", data = "<req>")]
 pub async fn update_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>)
                            -> Result<Status, SystemError> {
+    validate_request(&*req)?;
+    
     if req.id.is_none() {
         return Err(PredefinedApiError::InvalidRequest.get());
     }
+    
     let mut device = Device::get(db, req.id.unwrap()).await?
         .ok_or(PredefinedApiError::NotFound.get())?;
 
