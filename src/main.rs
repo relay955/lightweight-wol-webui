@@ -3,9 +3,13 @@ mod api;
 mod error;
 mod jwt;
 mod auth;
+mod module;
 
 #[macro_use] extern crate rocket;
 
+use std::fs;
+use std::io::Write;
+use std::path::Path;
 use std::str::Matches;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;

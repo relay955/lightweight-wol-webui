@@ -4,11 +4,13 @@ use serde_json::json;
 use serde_json::ser::CharEscape::CarriageReturn;
 use lazy_static::lazy_static;
 use validator::Validate;
+use std::net::UdpSocket;
 use crate::api::validate_request;
 use crate::auth::AuthUser;
 use crate::db::Db;
 use crate::db::device::{Device, DeviceOperations, MoveDirection};
 use crate::error::{PredefinedApiError, SystemError};
+use crate::module::magic_packet::send_magic_packet;
 
 // MAC 주소 정규식 (일반적인 형식: AA:BB:CC:DD:EE:FF 또는 AA-BB-CC-DD-EE-FF)
 lazy_static::lazy_static! {
@@ -138,5 +140,15 @@ pub async fn move_device(db: &Db, _auth: AuthUser,req: Json<MoveDeviceReq>,
     };
 
     Device::move_order(db, req.id, direction).await?;
+    Ok(Status::Ok)
+}
+
+#[post("/device/wake/<id>")]
+pub async fn wake_device(db: &Db, _auth: AuthUser, id: i64)
+                         -> Result<Status, SystemError> {
+    let device = Device::get(db, id).await?
+        .ok_or(PredefinedApiError::NotFound.get())?;
+    
+    send_magic_packet(&device.mac)?;
     Ok(Status::Ok)
 }

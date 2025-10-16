@@ -117,7 +117,6 @@
 
     /* 공통 액션 버튼 스타일 */
     .action-button {
-      margin-top: 16px;
       padding: 10px 16px;
       font-size: 16px;
       font-weight: normal;
@@ -135,6 +134,12 @@
       gap: 12px;
       position: relative;
       overflow: hidden;
+      
+      &.small{
+        padding: 6px 10px;
+        font-size: 14px;
+        border-radius: 6px;
+      }
 
       &::before {
         content: '';
