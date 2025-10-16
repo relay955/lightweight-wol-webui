@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use validator::Validate;
 use std::net::UdpSocket;
 use crate::api::validate_request;
-use crate::auth::AuthUser;
+use crate::module::auth::AuthUser;
 use crate::db::Db;
 use crate::db::device::{Device, DeviceOperations, MoveDirection};
 use crate::error::{PredefinedApiError, SystemError};

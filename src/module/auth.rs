@@ -2,7 +2,7 @@ use crate::db::token::{Token, TokenOperations};
 use crate::db::user::{User, UserOperations};
 use crate::db::Db;
 use crate::error::SystemError;
-use crate::jwt::{create_jwt, verify_jwt};
+use crate::module::jwt::{create_jwt, verify_jwt};
 use chrono::{Duration, Utc};
 use rocket::http::{Cookie, Status};
 use rocket::outcome::Outcome::{Error, Success};

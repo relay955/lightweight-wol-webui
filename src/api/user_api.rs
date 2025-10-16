@@ -6,11 +6,11 @@ use argon2::{
     Argon2,
 };
 use rocket::http::{Cookie, CookieJar, Status};
-use crate::auth::AuthUser;
+use crate::module::auth::AuthUser;
 use crate::db::{Db, user::{User, UserOperations}};
 use crate::db::token::{Token, TokenOperations};
 use crate::error::{PredefinedApiError, SystemError};
-use crate::jwt::{create_jwt, verify_jwt};
+use crate::module::jwt::{create_jwt, verify_jwt};
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -81,7 +81,7 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) ->
     Token::delete_by_user_id(db, user.id).await?;
 
     // refresh토큰 생성
-    let refresh_token = crate::auth::generate_refresh_token(&user);
+    let refresh_token = crate::module::auth::generate_refresh_token(&user);
     Token::insert(db, &refresh_token).await?;
 
     // 쿠키에 토큰 저장

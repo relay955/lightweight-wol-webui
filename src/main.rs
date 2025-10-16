@@ -2,13 +2,11 @@
 mod db;
 mod api;
 mod error;
-mod jwt;
-mod auth;
 mod module;
 
 #[macro_use] extern crate rocket;
 
-use std::{fs, thread};
+use std::thread;
 use std::io::Write;
 use rocket::fairing::AdHoc;
 use rocket::form::FromForm;
