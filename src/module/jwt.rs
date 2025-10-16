@@ -1,10 +1,8 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rocket::serde::{Deserialize, Serialize};
+use crate::config::JwtConfig;
 use crate::db::user::User;
 use crate::error::SystemError;
-
-const JWT_SECRET: &[u8] = b"b3f5c7a1d9e24f6b8c1a2d3e4f5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3 ";
-const EXPIRATION_MINUTES: i64 = 1;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -13,9 +11,9 @@ pub struct Claims {
     pub user_name: String,
 }
 
-pub fn create_jwt(user: &User) -> Result<String, SystemError> {
+pub fn create_jwt(user: &User, jwt_config: &JwtConfig) -> Result<String, SystemError> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::minutes(EXPIRATION_MINUTES))
+        .checked_add_signed(chrono::Duration::minutes(jwt_config.expiration_minutes))
         .expect("valid timestamp")
         .timestamp() as usize;
 
@@ -25,16 +23,25 @@ pub fn create_jwt(user: &User) -> Result<String, SystemError> {
         exp: expiration,
     };
 
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET))
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(jwt_config.secret.as_bytes()))
         .map_err(|e| SystemError::APIError(500, 0, format!("Failed to create JWT: {}", e)))
 }
 
-pub fn verify_jwt(token: &str) -> Result<Claims, SystemError> {
+pub fn verify_jwt(token: &str,  jwt_config: &JwtConfig) -> Result<Claims, SystemError> {
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET),
+        &DecodingKey::from_secret(jwt_config.secret.as_bytes()),
         &Validation::default(),
     )
     .map(|data| data.claims)
     .map_err(|e| SystemError::APIError(401, 0, format!("Invalid token: {}", e)))
+}
+
+pub fn generate_random_secret() -> String {
+    use rand_core::OsRng;
+    let mut rng = OsRng;
+    let mut bytes = [0u8; 32];
+    use rand_core::RngCore;
+    rng.fill_bytes(&mut bytes);
+    bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>()
 }

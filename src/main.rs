@@ -3,11 +3,13 @@ mod db;
 mod api;
 mod error;
 mod module;
+mod config;
 
 #[macro_use] extern crate rocket;
 
 use std::thread;
 use std::io::Write;
+use std::fs;
 use rocket::fairing::AdHoc;
 use rocket::form::FromForm;
 use rocket::fs::FileServer;
@@ -17,21 +19,54 @@ use rocket::tokio::runtime::Runtime;
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_db_pools::Database;
 use tray_item::{IconSource, TrayItem};
+use crate::config::{CorsConfig, JwtConfig};
 use crate::db::{create_tables, is_exist_tables, Db};
+use crate::module::jwt::generate_random_secret;
+
+fn update_secret_in_config(secret: &str) -> std::io::Result<()> {
+    let config_path = "Rocket.toml";
+    let content = fs::read_to_string(config_path)?;
+    let updated_content = content.replace(r#"secret = "generate""#, &format!(r#"secret = "{}""#, secret));
+    fs::write(config_path, updated_content)?;
+    Ok(())
+}
 
 fn build_rocket() -> rocket::Rocket<rocket::Build> {
+    let mut jwt_config = rocket::Config::figment()
+        .extract_inner::<JwtConfig>("jwt")
+        .unwrap_or_default();
+    let cors_config = rocket::Config::figment()
+        .extract_inner::<CorsConfig>("cors")
+        .unwrap_or_default();
+
+    if jwt_config.secret == "generate" {
+        let generated_secret = generate_random_secret();
+        if let Err(e) = update_secret_in_config(&generated_secret) {
+            eprintln!("Warning: Failed to update Rocket.toml with generated secret: {}", e);
+        }
+        jwt_config.secret = generated_secret;
+    }
+
+    let allowed_origins = if cors_config.allow_origin == "*" {
+        AllowedOrigins::all()
+    } else {
+        AllowedOrigins::some_exact(&[&cors_config.allow_origin])
+    };
+    
     let cors = CorsOptions::default()
-        .allow_credentials(true)
-        .allowed_origins(AllowedOrigins::all())
+        .allow_credentials(cors_config.allow_credentials)
+        .allowed_origins(allowed_origins)
         .allowed_methods(vec![Method::Get, Method::Post, Method::Put, Method::Delete].into_iter().map(From::from).collect())
         .to_cors().unwrap();
 
     rocket::build()
+        .manage(jwt_config)
         .mount("/api", routes![api::user_api::join,api::user_api::login, 
             api::user_api::profile, api::user_api::check_first_user,
             api::device_api::get_devices, api::device_api::create_device,
             api::device_api::update_device, api::device_api::delete_device,
             api::device_api::move_device, api::device_api::get_device,
+            api::device_api::wake_device,
         ])
         .register("/", catchers![api::catcher::unauthorized])
         .attach(Db::init()) // DB 풀 초기화

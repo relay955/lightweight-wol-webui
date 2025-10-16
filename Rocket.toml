@@ -1,6 +1,17 @@
 [default]
-secret_key = "zo9UdDftjF8OgUiiTNH49Z58yLNsHxko"  # Private cookie 암호화에 필요
+secret_key = "zo9UdDftjF8OgUiiTNH49Z58yLNsHxko"
 port = 25533
+
+[default.jwt]
+# If the secret value is "generate", the system will automatically recognize it and populate the value with a randomly generated secret key.
+# Never share this key or use it duplicately. It is very dangerous from a security perspective.
+secret = "generate"
+expiration_minutes = 30  # JWT access token
+refresh_token_expiration_days = 14  # refresh token
+
+[default.cors]
+allow_origin = "*"
+allow_credentials = true
 
 [default.databases.sqlite]
 url = "sqlite://app.db"

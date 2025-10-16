@@ -9,6 +9,7 @@ use rocket::outcome::Outcome::{Error, Success};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
 use uuid::Uuid;
+use crate::config::JwtConfig;
 
 pub struct AuthUser {
     pub id: i64,
@@ -30,6 +31,11 @@ impl<'r> FromRequest<'r> for AuthUser {
             _ => return create_outcome_error(Status::InternalServerError,"Database connection failed"),       
         };
 
+        let jwt_config = match request.rocket().state::<JwtConfig>() {
+            Some(config) => config,
+            None => return create_outcome_error(Status::InternalServerError,"JWT config not found"),       
+        };
+
         let access_token = request.cookies().get("accessToken")
             .map(|c| c.value().to_string());
         let refresh_token = request.cookies().get("refreshToken")
@@ -41,7 +47,7 @@ impl<'r> FromRequest<'r> for AuthUser {
 
         let token = access_token.unwrap();
 
-        match verify_jwt(&token) {
+        match verify_jwt(&token, &jwt_config) {
             Ok(claims) => Success(AuthUser {
                 id: claims.sub,
                 user_name: claims.user_name,
@@ -49,7 +55,7 @@ impl<'r> FromRequest<'r> for AuthUser {
             Err(_) => {
                 // accessToken 만료시 refreshToken으로 재발급 시도
                 if let Some(refresh_token_value) = refresh_token {
-                    match do_refresh(db, &refresh_token_value, request).await {
+                    match do_refresh(db, request,jwt_config, &refresh_token_value).await {
                         Ok(auth_user) => Success(auth_user),
                         Err(e) => Error((Status::Unauthorized, e)),
                     }
@@ -61,8 +67,9 @@ impl<'r> FromRequest<'r> for AuthUser {
     }
 }
 
-async fn do_refresh(db: &Db, refresh_token: &str, request: &Request<'_>) 
+async fn do_refresh(db: &Db, request: &Request<'_>,jwt_config: &JwtConfig, refresh_token: &str) 
     -> Result<AuthUser, SystemError> {
+
     println!("Executing refresh");
     // refreshToken으로 DB에서 토큰 조회
     let mut token = match Token::get_by_refresh_token(db, refresh_token.to_string()).await {
@@ -108,8 +115,8 @@ async fn do_refresh(db: &Db, refresh_token: &str, request: &Request<'_>)
             .map_err(|_| SystemError::APIError(500, 0, "Failed to renew token".to_string()))?;
     }
 
-    // 새로운 accessToken 생성
-    let new_access_token = create_jwt(&user)
+    // 새로운 accessToken 생성 (설정에서 가져온 만료 시간 사용)
+    let new_access_token = create_jwt(&user, &jwt_config)
         .map_err(|_| SystemError::APIError(500, 0, "Failed to create JWT".to_string()))?;
 
     // 쿠키 설정 (응답에 쿠키 추가)
