@@ -4,10 +4,12 @@ use crate::db::Db;
 use crate::error::SystemError;
 use crate::module::jwt::{create_jwt, verify_jwt};
 use chrono::{Duration, Utc};
-use rocket::http::{Cookie, Status};
+use rocket::http::{Cookie, Status, SameSite};
+use rocket::http::private::cookie::CookieBuilder;
 use rocket::outcome::Outcome::{Error, Success};
 use rocket::request::{FromRequest, Outcome, Request};
-use rocket::State;
+use rocket::{build, State};
+use serde_json::Value;
 use uuid::Uuid;
 use crate::config::JwtConfig;
 
@@ -16,10 +18,6 @@ pub struct AuthUser {
     pub user_name: String,
 }
 
-pub struct TokenCookies {
-    pub access_token: String,
-    pub refresh_token: String,
-}
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for AuthUser {
@@ -120,9 +118,9 @@ async fn do_refresh(db: &Db, request: &Request<'_>,jwt_config: &JwtConfig, refre
         .map_err(|_| SystemError::APIError(500, 0, "Failed to create JWT".to_string()))?;
 
     // 쿠키 설정 (응답에 쿠키 추가)
-    request.cookies().add(Cookie::build(("accessToken", new_access_token.clone())));
-    request.cookies().add(Cookie::build(("refreshToken", token.refresh_token.clone())));
-
+    request.cookies().add(bulid_cookie(&jwt_config,"accessToken", &new_access_token));
+    request.cookies().add(bulid_cookie(&jwt_config,"refreshToken", &token.refresh_token));
+    
     Ok(AuthUser {
         id: user.id,
         user_name: user.user_name,
@@ -136,6 +134,12 @@ pub fn generate_refresh_token(user: &User) -> Token {
         refresh_token: format!("{}{}", Uuid::new_v4(), Uuid::new_v4()),
         expire_at: (Utc::now() + Duration::days(14)).format("%Y-%m-%d %H:%M:%S").to_string(),
     }
+}
+
+pub fn bulid_cookie(jwt_config: &JwtConfig,key: &str, value: &str) -> Cookie<'static> {
+    Cookie::build((key.to_string(), value.to_string()))
+        .max_age(time::Duration::days(jwt_config.refresh_token_expiration_days))
+        .path("/").build()
 }
 fn create_outcome_error(status:Status,str:&str) -> Outcome<AuthUser, SystemError> {
     Error((status, SystemError::APIError(status.code, 0, str.to_string())))

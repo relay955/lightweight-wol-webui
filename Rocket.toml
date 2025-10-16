@@ -5,7 +5,7 @@ port = 25533
 [default.jwt]
 # If the secret value is "generate", the system will automatically recognize it and populate the value with a randomly generated secret key.
 # Never share this key or use it duplicately. It is very dangerous from a security perspective.
-secret = "generate"
+secret = "57fa90050046e55dabe5bde09311093e8a9442a9ac6aba2def461b16b3fce169"
 expiration_minutes = 30  # JWT access token
 refresh_token_expiration_days = 14  # refresh token
 
