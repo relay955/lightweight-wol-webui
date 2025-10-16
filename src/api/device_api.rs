@@ -1,5 +1,7 @@
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::http::Status;
+use serde_json::json;
+use serde_json::ser::CharEscape::CarriageReturn;
 use crate::auth::AuthUser;
 use crate::db::Db;
 use crate::db::device::{Device, DeviceOperations, MoveDirection};
@@ -8,54 +10,78 @@ use crate::error::{PredefinedApiError, SystemError};
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 pub struct GetDeviceRes {
-    pub devices: Vec<Device>,
-}
-
-#[get("/devices")]
-pub async fn get_devices(db: &Db, _auth: AuthUser) -> Result<Json<GetDeviceRes>, SystemError> {
-    let devices = Device::get_all(&db.0).await?;
-    Ok(Json(GetDeviceRes { devices }))
-}
-
-#[derive(Deserialize)]
-#[serde(crate = "rocket::serde")]
-pub struct CreateDeviceReq {
+    pub id: i64,
     pub name: String,
     pub mac: String,
     pub order_num: i64,
 }
 
-#[post("/devices", data = "<request>")]
-pub async fn create_device(db: &Db, _auth: AuthUser, request: Json<CreateDeviceReq>,
+#[get("/devices")]
+pub async fn get_devices(db: &Db, _auth: AuthUser) -> Result<Json<Vec<GetDeviceRes>>, SystemError> {
+    let devices = Device::get_all(db).await?;
+    let mut device_list = Vec::new();
+    for device in devices {
+        device_list.push(GetDeviceRes {
+            id: device.id,
+            name: device.name,
+            mac: device.mac,
+            order_num: device.order_num,
+        });
+    }
+    Ok(Json(device_list))
+}
+
+#[get("/device/<id>")]
+pub async fn get_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Json<GetDeviceRes>, SystemError> {
+    let device = Device::get(db, id).await?
+        .ok_or(PredefinedApiError::NotFound.get())?;
+
+    let device_res = GetDeviceRes {
+        id: device.id,
+        name: device.name,
+        mac: device.mac,
+        order_num: device.order_num,
+    };
+    
+    Ok(Json(device_res))
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct PostDeviceReq {
+    pub id:Option<i64>,
+    pub name: String,
+    pub mac: String,
+}
+
+#[post("/device", data = "<req>")]
+pub async fn create_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>,
 ) -> Result<Status, SystemError> {
+    let max_order = Device::get_max_order_num(&db.0).await?;
+
     let device = Device{
         id: 0,
-        name: request.name.clone(),
-        mac: request.mac.clone(),
-        order_num: request.order_num,
+        name: req.name.clone(),
+        mac: req.mac.clone(),
+        order_num: max_order + 1,
     };
     Device::insert(db,&device).await?;
     Ok(Status::Ok)
 }
 
-#[derive(Deserialize)]
-#[serde(crate = "rocket::serde")]
-pub struct UpdateDeviceReq {
-    pub name: String,
-    pub mac: String,
-    pub order_num: i64,
-}
 
-#[put("/devices/<id>", data = "<request>")]
-pub async fn update_device(db: &Db, _auth: AuthUser, id: i64, request: Json<UpdateDeviceReq>) 
-    -> Result<Status, SystemError> {
-    let mut device = Device::get(db, id).await?
+#[put("/device", data = "<req>")]
+pub async fn update_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>)
+                           -> Result<Status, SystemError> {
+    if req.id.is_none() {
+        return Err(PredefinedApiError::InvalidRequest.get());
+    }
+    let mut device = Device::get(db, req.id.unwrap()).await?
         .ok_or(PredefinedApiError::NotFound.get())?;
 
     // 필드 업데이트
-    device.name = request.name.clone();
-    device.mac = request.mac.clone();
-    device.order_num = request.order_num;
+    device.name = req.name.clone();
+    device.mac = req.mac.clone();
 
     // DB 업데이트
     device.update(db).await?;
@@ -63,7 +89,7 @@ pub async fn update_device(db: &Db, _auth: AuthUser, id: i64, request: Json<Upda
     Ok(Status::Ok)
 }
 
-#[delete("/devices/<id>")]
+#[delete("/device/<id>")]
 pub async fn delete_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Status, SystemError> {
     Device::delete(&db.0, id).await?;
     Ok(Status::Ok)
@@ -72,25 +98,19 @@ pub async fn delete_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Status, 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct MoveDeviceReq {
+    pub id: i64,
     pub direction: String, // "up" or "down"
 }
 
-#[post("/devices/<id>/move", data = "<request>")]
-pub async fn move_device(db: &Db, _auth: AuthUser, id: i64, request: Json<MoveDeviceReq>,
+#[post("/device/move", data = "<req>")]
+pub async fn move_device(db: &Db, _auth: AuthUser,req: Json<MoveDeviceReq>,
 ) -> Result<Status, SystemError> {
-    // 디바이스 존재 확인
-    Device::get(db, id)
-        .await?
-        .ok_or(PredefinedApiError::NotFound.get())?;
-
-    // 방향 파싱
-    let direction = match request.direction.to_lowercase().as_str() {
+    let direction = match req.direction.to_lowercase().as_str() {
         "up" => MoveDirection::Up,
         "down" => MoveDirection::Down,
         _ => return Err(SystemError::APIError(400, 0, "Invalid direction. Use 'up' or 'down'".to_string())),
     };
 
-    // 순서 변경
-    Device::move_order(db, id, direction).await?;
+    Device::move_order(db, req.id, direction).await?;
     Ok(Status::Ok)
 }
