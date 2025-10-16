@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 rocket = { version = "0.5.1", features = ["json"] }
+tray-item = "0.10.0"
 rocket_cors = "0.6"
 rocket_db_pools = { version = "0.2.0", features = ["sqlx_sqlite"] }  # Rocket의 DB 풀
 serde = { version = "1.0.225", features = ["derive"] }
@@ -29,3 +30,11 @@ uuid = { version = "1.18.1", features = ["v4"] }
 lazy_static = "1.5.0"
 regex = "1.11.2"
 validator = {version = "0.20.0", features = ["derive"] }
+
+[build-dependencies]
+winres = "0.1.12"
+
+[[bin]]
+name = "lightweight-wol-webui"
+path = "src/main.rs"
+required-features = []
