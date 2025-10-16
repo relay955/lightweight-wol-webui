@@ -34,6 +34,7 @@ pub struct GetDeviceRes {
     pub id: i64,
     pub name: String,
     pub mac: String,
+    pub ip: String,   
     pub order_num: i64,
 }
 
@@ -46,6 +47,7 @@ pub async fn get_devices(db: &Db, _auth: AuthUser) -> Result<Json<Vec<GetDeviceR
             id: device.id,
             name: device.name,
             mac: device.mac,
+            ip: device.ip,       
             order_num: device.order_num,
         });
     }
@@ -61,6 +63,7 @@ pub async fn get_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Json<GetDev
         id: device.id,
         name: device.name,
         mac: device.mac,
+        ip: device.ip,       
         order_num: device.order_num,
     };
     
@@ -75,6 +78,7 @@ pub struct PostDeviceReq {
     pub name: String,
     #[validate(custom(function = "validate_mac_address", message = "올바른 MAC 주소 형식이 아닙니다 (예: AA:BB:CC:DD:EE:FF)"))]
     pub mac: String,
+    pub ip: String, 
 }
 
 #[post("/device", data = "<req>")]
@@ -88,6 +92,7 @@ pub async fn create_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>,
         id: 0,
         name: req.name.clone(),
         mac: req.mac.clone(),
+        ip: req.ip.to_string(),       
         order_num: max_order + 1,
     };
     Device::insert(db,&device).await?;
@@ -110,6 +115,7 @@ pub async fn update_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>)
     // 필드 업데이트
     device.name = req.name.clone();
     device.mac = req.mac.clone();
+    device.ip = req.ip.clone();  
 
     // DB 업데이트
     device.update(db).await?;

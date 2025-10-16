@@ -45,6 +45,7 @@ pub async fn create_tables(db: &Db) -> Result<(), SystemError> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name VARCHAR(255) NOT NULL,
             mac VARCHAR(17) NOT NULL,
+            ip VARCHAR(20) NOT NULL,
             order_num INTEGER NOT NULL
         )"#,
     )

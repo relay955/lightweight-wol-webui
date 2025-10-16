@@ -12,7 +12,7 @@
   let isEditMode = $state(false);
   let isSaving = $state(false);
   let req = $state<PostDeviceReq>({
-    id: 0, name: "", mac: ""
+    id: 0, name: "", mac: "", ip: ""
   })
 
 
@@ -85,6 +85,18 @@
               placeholder="00:11:22:33:44:55"
               disabled={isSaving}
               required
+            />
+          </div>
+          
+          <!-- IP Address -->
+          <div class="form-group">
+            <label for="ip">IP (optional)</label>
+            <input
+                id="ip"
+                type="text"
+                bind:value={req.ip}
+                placeholder="192.168.0.1"
+                disabled={isSaving}
             />
           </div>
 

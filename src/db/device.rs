@@ -6,6 +6,7 @@ pub struct Device {
     pub id: i64,
     pub name: String,
     pub mac: String,
+    pub ip: String,
     pub order_num: i64,
 }
 
@@ -26,14 +27,13 @@ pub trait DeviceOperations {
 #[async_trait::async_trait]
 impl DeviceOperations for Device {
     async fn get_all(pool: &SqlitePool) -> Result<Vec<Device>, sqlx::Error> {
-        
-        sqlx::query_as::<_, Device>("SELECT id, name, mac, order_num FROM device ORDER BY order_num")
+        sqlx::query_as::<_, Device>("SELECT * FROM device ORDER BY order_num")
             .fetch_all(pool)
             .await
     }
 
     async fn get(pool: &SqlitePool, id: i64) -> Result<Option<Device>, sqlx::Error> {
-        sqlx::query_as::<_, Device>("SELECT id, name, mac, order_num FROM device WHERE id = ?")
+        sqlx::query_as::<_, Device>("SELECT * FROM device WHERE id = ?")
             .bind(id)
             .fetch_optional(pool)
             .await
@@ -48,9 +48,10 @@ impl DeviceOperations for Device {
     }
 
     async fn insert(pool: &SqlitePool, device: &Device) -> Result<Device, sqlx::Error> {
-        let result = sqlx::query("INSERT INTO device (name, mac, order_num) VALUES (?, ?, ?)")
+        let result = sqlx::query("INSERT INTO device (name, mac, ip, order_num) VALUES (?, ?, ?, ?)")
             .bind(&device.name)
             .bind(&device.mac)
+            .bind(&device.ip)           
             .bind(device.order_num)
             .execute(pool)
             .await?;
@@ -61,14 +62,16 @@ impl DeviceOperations for Device {
             id,
             name: device.name.clone(),
             mac: device.mac.clone(),
+            ip: device.ip.clone(),
             order_num: device.order_num,
         })
     }
 
     async fn update(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE device SET name = ?, mac = ?, order_num = ? WHERE id = ?")
+        sqlx::query("UPDATE device SET name = ?, mac = ?, ip = ?, order_num = ? WHERE id = ?")
             .bind(&self.name)
             .bind(&self.mac)
+            .bind(&self.ip)           
             .bind(self.order_num)
             .bind(self.id)
             .execute(pool)
@@ -95,8 +98,8 @@ impl DeviceOperations for Device {
 
         // 방향에 따라 SQL 쿼리 선택
         let query = match direction {
-            MoveDirection::Up => "SELECT id, name, mac, order_num FROM device WHERE order_num < ? ORDER BY order_num DESC LIMIT 1",
-            MoveDirection::Down => "SELECT id, name, mac, order_num FROM device WHERE order_num > ? ORDER BY order_num ASC LIMIT 1",
+            MoveDirection::Up => "SELECT * FROM device WHERE order_num < ? ORDER BY order_num DESC LIMIT 1",
+            MoveDirection::Down => "SELECT * FROM device WHERE order_num > ? ORDER BY order_num ASC LIMIT 1",
         };
 
         // 인접한 항목 조회
