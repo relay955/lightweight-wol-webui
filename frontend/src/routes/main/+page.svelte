@@ -434,6 +434,14 @@
       text-align: center;
     }
 
+    .device-wol-actions {
+      width: 100%;
+
+      .action-button {
+        width: 100%;
+      }
+    }
+
     .device-actions {
       justify-content: center;
       width: 100%;
