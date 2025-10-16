@@ -4,6 +4,7 @@
   import {onMount} from "svelte";
   import {toast} from "@zerodevx/svelte-toast";
   import {goto} from "$app/navigation";
+  import Cookies from "universal-cookie";
   
   let devices: GetDeviceRes[] = $state([]);
   let isLoading = $state(true);
@@ -38,6 +39,13 @@
   onMount(() => {
     loadDevices();
   });
+
+  const onClickLogout = () => {
+    const cookie = new Cookies();
+    cookie.remove("accessToken", { path: "/" });
+    cookie.remove("refreshToken", { path: "/" });
+    goto('/login');
+  }
 </script>
 
 <div class="main-container">
@@ -48,13 +56,22 @@
         <h1 class="main-title">WOL Devices</h1>
         <p class="main-subtitle">Wake-on-LAN Device Management</p>
       </div>
-      <button class="add-button action-button" onclick={() => goto('/edit')}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Add Device
-      </button>
+      <div class="header-actions">
+        <button class="add-button action-button" onclick={() => goto('/edit')}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Device
+        </button>
+        <button class="icon-button logout" onclick={onClickLogout} aria-label="Logout">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -209,6 +226,40 @@
     white-space: nowrap;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    background: var(--color-light-gray);
+    cursor: pointer;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover:not(:disabled) {
+      background: var(--color-white);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+  
+  .logout{
+    width: 44px;
+    height: 44px;
+  }
+
   /* 장치 그리드 */
   .devices-list {
     display: flex;
@@ -292,28 +343,6 @@
       display: flex;
       gap: 8px;
       flex-shrink: 0;
-    }
-
-    .icon-button {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: 2px solid var(--color-border);
-      background: var(--color-light-gray);
-      cursor: pointer;
-      transition: var(--transition-base);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      &:hover:not(:disabled) {
-        background: var(--color-white);
-      }
-
-      &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
     }
 
     .move-up-button {
