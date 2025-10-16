@@ -34,7 +34,7 @@ fn rocket() -> _ {
             api::user_api::profile, api::user_api::check_first_user,
             api::device_api::get_devices, api::device_api::create_device,
             api::device_api::update_device, api::device_api::delete_device,
-            api::device_api::move_device
+            api::device_api::move_device, api::device_api::get_device,
         ])
         .register("/", catchers![api::catcher::unauthorized])
         .attach(Db::init()) // DB 풀 초기화

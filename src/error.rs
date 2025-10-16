@@ -59,6 +59,7 @@ pub enum PredefinedApiError {
     InternalServerError,
     Duplicated,
     TokenExpired,
+    InvalidRequest,
 }
 
 impl PredefinedApiError {
@@ -70,6 +71,7 @@ impl PredefinedApiError {
             PredefinedApiError::InternalServerError => SystemError::APIError(500, 4, "Internal server error".to_string()),
             PredefinedApiError::Duplicated => SystemError::APIError(422, 5, "Item already exists".to_string()),
             PredefinedApiError::TokenExpired => SystemError::APIError(422, 6, "Token expired".to_string()),
+            PredefinedApiError::InvalidRequest => SystemError::APIError(422, 7, "Invalid Request".to_string()),
         }
     }
 }

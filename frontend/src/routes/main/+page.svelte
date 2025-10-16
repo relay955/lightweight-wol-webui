@@ -3,22 +3,16 @@
   import {showToastOnError} from "../../util/errorParser";
   import {onMount} from "svelte";
   import {toast} from "@zerodevx/svelte-toast";
-
-  interface Device {
-    id: number;
-    name: string;
-    mac: string;
-    order_num: number;
-  }
-
-  let devices: Device[] = $state([]);
+  import {goto} from "$app/navigation";
+  
+  let devices: GetDeviceRes[] = $state([]);
   let isLoading = $state(true);
 
   // 장치 목록 불러오기
   const loadDevices = showToastOnError(async () => {
     isLoading = true;
     const res = await axios.get('/devices');
-    devices = res.data.devices;
+    devices = res.data;
     isLoading = false;
   }, () => isLoading = false);
 
@@ -49,7 +43,7 @@
         <h1 class="main-title">WOL Devices</h1>
         <p class="main-subtitle">Wake-on-LAN Device Management</p>
       </div>
-      <button class="add-button action-button">
+      <button class="add-button action-button" onclick={() => goto('/edit')}>
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -76,7 +70,7 @@
       </div>
     {:else}
       <!-- Device List -->
-      <div class="devices-grid">
+      <div class="devices-list">
         {#each devices as device (device.id)}
           <div class="device-card">
             <div class="device-info">
@@ -98,7 +92,8 @@
               </div>
             </div>
             <div class="device-actions">
-              <button class="icon-button edit-button" title="Edit">
+              <button class="icon-button edit-button" title="Edit"
+                      onclick={() => goto(`/edit?id=${device.id}`)}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -169,7 +164,6 @@
     font-weight: bold;
     color: var(--color-black);
     margin: 0 0 8px 0;
-    letter-spacing: -0.5px;
   }
 
   .main-subtitle {
@@ -186,153 +180,103 @@
   }
 
   /* 장치 그리드 */
-  .devices-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 24px;
-    animation: fadeIn 0.4s ease-in-out;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* 장치 카드 */
-  .device-card {
-    background: var(--color-white);
-    border-radius: 12px;
-    padding: 24px;
-    border: 2px solid var(--color-border);
-    transition: var(--transition-base);
+  .devices-list {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-
-    &:hover {
-      border-color: var(--color-black);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
-    }
-  }
-
-  .device-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .device-icon {
-    width: 48px;
-    height: 48px;
-    background: var(--color-light-gray);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 2px solid var(--color-border);
-    transition: var(--transition-base);
-
-    svg {
-      color: var(--color-black);
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 40px;
+    /* 장치 카드 */
+    .device-card {
+      background: var(--color-white);
+      border-radius: 12px;
+      padding: 24px;
+      border: 2px solid var(--color-border);
+      transition: var(--transition-base);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
-    .device-card:hover & {
-      background: var(--color-black);
-      border-color: var(--color-black);
+    .device-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .device-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--color-light-gray);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 2px solid var(--color-border);
+      transition: var(--transition-base);
 
       svg {
-        color: var(--color-white);
+        color: var(--color-black);
       }
     }
-  }
 
-  .device-details {
-    flex: 1;
-    min-width: 0;
-  }
+    .device-details {
+      flex: 1;
+      min-width: 0;
+    }
 
-  .device-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--color-black);
-    margin: 0 0 6px 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+    .device-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-black);
+      margin: 0 0 6px 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-  .device-mac {
-    font-size: 13px;
-    color: var(--color-dark-gray);
-    margin: 0;
-    font-family: 'Courier New', monospace;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    .device-mac {
+      font-size: 13px;
+      color: var(--color-dark-gray);
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
 
-    svg {
+      svg {
+        flex-shrink: 0;
+      }
+    }
+
+    .device-actions {
+      display: flex;
+      gap: 8px;
       flex-shrink: 0;
     }
-  }
 
-  /* 액션 버튼들 */
-  .device-actions {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .icon-button {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: 2px solid var(--color-border);
-    background: var(--color-light-gray);
-    cursor: pointer;
-    transition: var(--transition-base);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    svg {
-      color: var(--color-black);
+    .icon-button {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 2px solid var(--color-border);
+      background: var(--color-light-gray);
+      cursor: pointer;
       transition: var(--transition-base);
-    }
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-    &:hover {
-      transform: translateY(-2px);
-    }
-
-    &.edit-button:hover {
-      background: var(--color-black);
-      border-color: var(--color-black);
-
-      svg {
-        color: var(--color-white);
-      }
-    }
-
-    &.delete-button:hover {
-      background: #dc3545;
-      border-color: #dc3545;
-
-      svg {
-        color: var(--color-white);
+      &:hover {
+        background: var(--color-white);
       }
     }
   }
+
 
   /* 빈 상태 */
   .empty-state {
@@ -387,7 +331,7 @@
       width: 100%;
     }
 
-    .devices-grid {
+    .devices-list {
       grid-template-columns: 1fr;
       gap: 16px;
     }

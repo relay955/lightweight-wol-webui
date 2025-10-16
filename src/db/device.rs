@@ -16,6 +16,7 @@ pub enum MoveDirection { Up, Down }
 pub trait DeviceOperations {
     async fn get_all(pool: &SqlitePool) -> Result<Vec<Device>, sqlx::Error>;
     async fn get(pool: &SqlitePool, id: i64) -> Result<Option<Device>, sqlx::Error>;
+    async fn get_max_order_num(pool: &SqlitePool) -> Result<i64, sqlx::Error>;
     async fn insert(pool: &SqlitePool, device: &Device) -> Result<Device, sqlx::Error>;
     async fn update(&self, pool: &SqlitePool) -> Result<(), sqlx::Error>;
     async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error>;
@@ -36,6 +37,14 @@ impl DeviceOperations for Device {
             .bind(id)
             .fetch_optional(pool)
             .await
+    }
+
+    async fn get_max_order_num(pool: &SqlitePool) -> Result<i64, sqlx::Error> {
+        let result: Option<(Option<i64>,)> = sqlx::query_as("SELECT MAX(order_num) FROM device")
+            .fetch_optional(pool)
+            .await?;
+
+        Ok(result.and_then(|r| r.0).unwrap_or(0))
     }
 
     async fn insert(pool: &SqlitePool, device: &Device) -> Result<Device, sqlx::Error> {
