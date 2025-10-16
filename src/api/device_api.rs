@@ -17,6 +17,15 @@ lazy_static::lazy_static! {
     ).unwrap();
 }
 
+// MAC 주소 검증 함수
+fn validate_mac_address(mac: &str) -> Result<(), validator::ValidationError> {
+    if MAC_ADDRESS_REGEX.is_match(mac) {
+        Ok(())
+    } else {
+        Err(validator::ValidationError::new("invalid_mac_address"))
+    }
+}
+
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 pub struct GetDeviceRes {
@@ -62,7 +71,7 @@ pub struct PostDeviceReq {
     pub id: Option<i64>,
     #[validate(length(min = 1, message = "이름은 공백일 수 없습니다"))]
     pub name: String,
-    #[validate(regex(path = "MAC_ADDRESS_REGEX", message = "올바른 MAC 주소 형식이 아닙니다 (예: AA:BB:CC:DD:EE:FF)"))]
+    #[validate(custom(function = "validate_mac_address", message = "올바른 MAC 주소 형식이 아닙니다 (예: AA:BB:CC:DD:EE:FF)"))]
     pub mac: String,
 }
 
@@ -119,7 +128,7 @@ pub struct MoveDeviceReq {
     pub direction: String, // "up" or "down"
 }
 
-#[post("/device/move", data = "<req>")]
+#[put("/device/move", data = "<req>")]
 pub async fn move_device(db: &Db, _auth: AuthUser,req: Json<MoveDeviceReq>,
 ) -> Result<Status, SystemError> {
     let direction = match req.direction.to_lowercase().as_str() {
