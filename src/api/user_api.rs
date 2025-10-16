@@ -6,6 +6,7 @@ use argon2::{
     Argon2,
 };
 use rocket::http::{Cookie, CookieJar, Status};
+use crate::config::JwtConfig;
 use crate::module::auth::AuthUser;
 use crate::db::{Db, user::{User, UserOperations}};
 use crate::db::token::{Token, TokenOperations};
@@ -62,7 +63,8 @@ pub struct LoginReq {
 }
 
 #[post("/login", data = "<request>")]
-pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) -> Result<Status, SystemError> {
+pub async fn login(db: &Db, cookies: &CookieJar<'_>, jwt_config: &State<JwtConfig>, request: Json<LoginReq>)
+    -> Result<Status, SystemError> {
     // 사용자 조회
     let user = User::get_by_user_name(db, &request.user_name)
         .await?.ok_or(PredefinedApiError::NotFound.get())?;
@@ -75,7 +77,7 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, request: Json<LoginReq>) ->
         .map_err(|_| SystemError::APIError(422, 0, "Username or password does not match".to_string()))?;
 
     // JWT 토큰 생성
-    let access_token = create_jwt(&user)?;
+    let access_token = create_jwt(&user, &jwt_config)?;
 
     //기존 해당 유저의 refresh토큰이 있었다면, 해당 토큰을 모두 제거
     Token::delete_by_user_id(db, user.id).await?;
