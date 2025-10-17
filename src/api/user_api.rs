@@ -79,8 +79,8 @@ pub async fn login(db: &Db, cookies: &CookieJar<'_>, jwt_config: &State<JwtConfi
     // JWT 토큰 생성
     let access_token = create_jwt(&user, &jwt_config)?;
 
-    //기존 해당 유저의 refresh토큰이 있었다면, 해당 토큰을 모두 제거
-    Token::delete_by_user_id(db, user.id).await?;
+    //기존 해당 유저의 만료된 refresh토큰을 모두 제거
+    Token::delete_expired_by_user_id(db, user.id).await?;
 
     // refresh토큰 생성
     let refresh_token = crate::module::auth::generate_refresh_token(&user);
