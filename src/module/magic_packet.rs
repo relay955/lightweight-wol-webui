@@ -1,5 +1,5 @@
-use std::net::UdpSocket;
 use crate::error::SystemError;
+use std::net::{Ipv4Addr, UdpSocket};
 
 // MAC 주소를 바이트 배열로 파싱
 pub fn parse_mac_address(mac: &str) -> Result<[u8; 6], SystemError> {
@@ -28,16 +28,23 @@ pub fn create_magic_packet(mac_bytes: [u8; 6]) -> Vec<u8> {
     packet
 }
 
-pub fn send_magic_packet(mac: &str) -> Result<(), SystemError> {
+pub fn send_magic_packet(mac: &str, broadcast_ip: &str) -> Result<(), SystemError> {
     let mac_bytes = parse_mac_address(mac)?;
     let magic_packet = create_magic_packet(mac_bytes);
 
+    let broadcast_ip = broadcast_ip.parse::<Ipv4Addr>().map_err(|_| {
+        SystemError::APIError(500, 0, format!("Invalid WOL broadcast IPv4 address: {broadcast_ip}"))
+    })?;
+
     let socket = UdpSocket::bind("0.0.0.0:0")
-        .map_err(|e| SystemError::APIError(500, 0, format!("Failed to bind UDP socket: {}", e)))?;
+        .map_err(|e| SystemError::APIError(500, 0, format!("Failed to bind UDP socket: {e}")))?;
     socket.set_broadcast(true)
         .map_err(|e| SystemError::APIError(500, 0, format!("Failed to set broadcast: {}", e)))?;
-    socket.send_to(&magic_packet, "255.255.255.255:9")
-        .map_err(|e| SystemError::APIError(500, 0, format!("Failed to send magic packet: {}", e)))?;
+
+    let destination = format!("{broadcast_ip}:9");
+    socket.send_to(&magic_packet, &destination).map_err(|e| {
+        SystemError::APIError(500, 0, format!("Failed to send magic packet to {destination}: {e}"))
+    })?;
 
     Ok(())
 }

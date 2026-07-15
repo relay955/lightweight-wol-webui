@@ -13,5 +13,9 @@ refresh_token_expiration_days = 14  # refresh token
 allow_origin = "*"
 allow_credentials = true
 
+[default.wol]
+# Set this to the directed broadcast address of the LAN containing the WOL devices.
+broadcast_ip = "192.168.0.255"
+
 [default.databases.sqlite]
 url = "sqlite://app.db"

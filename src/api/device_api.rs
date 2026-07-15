@@ -1,5 +1,6 @@
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::http::Status;
+use rocket::State;
 use serde_json::json;
 use serde_json::ser::CharEscape::CarriageReturn;
 use lazy_static::lazy_static;
@@ -10,6 +11,7 @@ use crate::module::auth::AuthUser;
 use crate::db::Db;
 use crate::db::device::{Device, DeviceOperations, MoveDirection};
 use crate::error::{PredefinedApiError, SystemError};
+use crate::config::WolConfig;
 use crate::module::magic_packet::send_magic_packet;
 
 // MAC 주소 정규식 (일반적인 형식: AA:BB:CC:DD:EE:FF 또는 AA-BB-CC-DD-EE-FF)
@@ -150,11 +152,11 @@ pub async fn move_device(db: &Db, _auth: AuthUser,req: Json<MoveDeviceReq>,
 }
 
 #[post("/device/wake/<id>")]
-pub async fn wake_device(db: &Db, _auth: AuthUser, id: i64)
+pub async fn wake_device(db: &Db, wol_config: &State<WolConfig>, _auth: AuthUser, id: i64)
                          -> Result<Status, SystemError> {
     let device = Device::get(db, id).await?
         .ok_or(PredefinedApiError::NotFound.get())?;
-    
-    send_magic_packet(&device.mac)?;
+
+    send_magic_packet(&device.mac, &wol_config.broadcast_ip)?;
     Ok(Status::Ok)
 }

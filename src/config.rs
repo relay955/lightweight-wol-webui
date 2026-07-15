@@ -25,6 +25,20 @@ pub struct CorsConfig {
     pub allow_credentials: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+pub struct WolConfig {
+    pub broadcast_ip: String,
+}
+
+impl Default for WolConfig {
+    fn default() -> Self {
+        Self {
+            broadcast_ip: "192.168.0.255".to_string(),
+        }
+    }
+}
+
 impl Default for CorsConfig {
     fn default() -> Self {
         Self {

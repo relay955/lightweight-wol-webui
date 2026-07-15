@@ -19,7 +19,7 @@ use rocket::tokio::runtime::Runtime;
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_db_pools::Database;
 use tray_item::{IconSource, TrayItem};
-use crate::config::{CorsConfig, JwtConfig};
+use crate::config::{CorsConfig, JwtConfig, WolConfig};
 use crate::db::{create_tables, is_exist_tables, Db};
 use crate::module::jwt::generate_random_secret;
 
@@ -37,6 +37,9 @@ fn build_rocket() -> rocket::Rocket<rocket::Build> {
         .unwrap_or_default();
     let cors_config = rocket::Config::figment()
         .extract_inner::<CorsConfig>("cors")
+        .unwrap_or_default();
+    let wol_config = rocket::Config::figment()
+        .extract_inner::<WolConfig>("wol")
         .unwrap_or_default();
 
     if jwt_config.secret == "generate" {
@@ -61,6 +64,7 @@ fn build_rocket() -> rocket::Rocket<rocket::Build> {
 
     rocket::build()
         .manage(jwt_config)
+        .manage(wol_config)
         .mount("/api", routes![api::user_api::join,api::user_api::login, 
             api::user_api::profile, api::user_api::check_first_user,
             api::device_api::get_devices, api::device_api::create_device,
