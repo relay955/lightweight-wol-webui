@@ -34,11 +34,11 @@ pub fn handle_message(text: &str, shutdown: impl FnOnce() -> AgentResult<()>) ->
     })
 }
 
-/// Windows 기본 종료 프로그램으로 강제 종료 없이 시스템 종료를 요청합니다.
+/// Windows 기본 종료 프로그램으로 앱을 강제 종료하고 시스템 종료를 요청합니다.
 pub fn shutdown_computer() -> AgentResult<()> {
     let root = std::env::var_os("SystemRoot").ok_or("Windows 시스템 경로를 찾을 수 없습니다.")?;
     let status = Command::new(PathBuf::from(root).join("System32").join("shutdown.exe"))
-        .args(["/s", "/t", "0"]).creation_flags(CREATE_NO_WINDOW).status()
+        .args(["/s", "/f", "/t", "0"]).creation_flags(CREATE_NO_WINDOW).status()
         .map_err(|_| "Windows 종료 프로그램을 실행할 수 없습니다.")?;
     if !status.success() { return Err("Windows가 종료 요청을 거부했습니다.".into()); }
     Ok(())
