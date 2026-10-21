@@ -40,11 +40,14 @@ pub struct GetDeviceRes {
     pub ip: String,   
     pub order_num: i64,
     pub authkey: String,
+    pub connected: bool,
 }
 
 #[get("/devices")]
-pub async fn get_devices(db: &Db, _auth: AuthUser) -> Result<Json<Vec<GetDeviceRes>>, SystemError> {
+pub async fn get_devices(db: &Db, agents: &State<AgentConnections>, _auth: AuthUser)
+    -> Result<Json<Vec<GetDeviceRes>>, SystemError> {
     let devices = Device::get_all(db).await?;
+    let connected_ids = agents.connected_device_ids();
     let mut device_list = Vec::new();
     for device in devices {
         device_list.push(GetDeviceRes {
@@ -54,13 +57,15 @@ pub async fn get_devices(db: &Db, _auth: AuthUser) -> Result<Json<Vec<GetDeviceR
             ip: device.ip,       
             order_num: device.order_num,
             authkey: device.authkey,
+            connected: connected_ids.contains(&device.id),
         });
     }
     Ok(Json(device_list))
 }
 
 #[get("/device/<id>")]
-pub async fn get_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Json<GetDeviceRes>, SystemError> {
+pub async fn get_device(db: &Db, agents: &State<AgentConnections>, _auth: AuthUser, id: i64)
+    -> Result<Json<GetDeviceRes>, SystemError> {
     let device = Device::get(db, id).await?
         .ok_or(PredefinedApiError::NotFound.get())?;
 
@@ -71,6 +76,7 @@ pub async fn get_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Json<GetDev
         ip: device.ip,       
         order_num: device.order_num,
         authkey: device.authkey,
+        connected: agents.connected_device_ids().contains(&id),
     };
     
     Ok(Json(device_res))
@@ -178,6 +184,25 @@ pub async fn shutdown_device(db: &Db, agents: &State<AgentConnections>, _auth: A
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[rocket::async_test]
+    async fn device_queries_reflect_agent_connection_lifecycle() {
+        let db = Db(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        crate::db::migration::migrate(&db.0).await.unwrap();
+        sqlx::query("INSERT INTO device (name, mac, ip, order_num, authkey) VALUES ('test', '', '', 1, ?)")
+            .bind(generate_authkey()).execute(&db.0).await.unwrap();
+        let agents = AgentConnections::default();
+        let state = State::from(&agents);
+        let user = || AuthUser { id: 1, user_name: "test".into() };
+        assert!(!get_devices(&db, state, user()).await.unwrap().0[0].connected);
+        let (registration, receiver) = agents.register(1);
+        assert!(get_devices(&db, state, user()).await.unwrap().0[0].connected);
+        assert!(get_device(&db, state, user(), 1).await.unwrap().connected);
+        drop(receiver);
+        assert!(!get_devices(&db, state, user()).await.unwrap().0[0].connected);
+        drop(registration);
+        assert!(!get_device(&db, state, user(), 1).await.unwrap().connected);
+    }
 
     #[rocket::async_test]
     async fn shutdown_reports_offline_agent() {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::{Arc, Mutex}, time::Duration};
+use std::{collections::{HashMap, HashSet}, sync::{Arc, Mutex}, time::Duration};
 use rocket::tokio::{sync::{mpsc, oneshot}, time::timeout};
 use serde::Serialize;
 use crate::error::SystemError;
@@ -25,6 +25,12 @@ pub struct AgentRegistration {
 }
 
 impl AgentConnections {
+    /// 현재 연결된 장치 ID를 한 번에 조회합니다.
+    pub fn connected_device_ids(&self) -> HashSet<i64> {
+        self.0.lock().unwrap().iter()
+            .filter(|(_, sender)| !sender.is_closed()).map(|(&id, _)| id).collect()
+    }
+
     /// 장치의 최신 연결을 등록합니다.
     pub fn register(&self, id: i64) -> (AgentRegistration, mpsc::Receiver<ShutdownRequest>) {
         let (sender, receiver) = mpsc::channel(1);

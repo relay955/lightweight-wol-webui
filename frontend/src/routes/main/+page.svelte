@@ -8,6 +8,7 @@
   
   let devices: GetDeviceRes[] = $state([]);
   let isLoading = $state(true);
+  let isRefreshing = false;
   let shutdownRequests: number[] = $state([]);
 
   const copyAuthkey = (authkey: string) => showToastOnError(async () => {
@@ -17,11 +18,17 @@
   })();
 
   // 장치 목록 불러오기
-  const loadDevices = showToastOnError(async () => {
-    isLoading = true;
-    const res = await axios.get('/devices');
-    devices = res.data;
-  }, () => isLoading = false);
+  const loadDevices = async () => {
+    if (isRefreshing) return;
+    isRefreshing = true;
+    await showToastOnError(async () => {
+      const res = await axios.get<GetDeviceRes[]>('/devices');
+      devices = res.data;
+    }, () => {
+      isLoading = false;
+      isRefreshing = false;
+    })();
+  };
 
   // Delete device
   const deleteDevice = (id: number) => showToastOnError(async () => {
@@ -52,6 +59,8 @@
 
   onMount(() => {
     loadDevices();
+    const interval = window.setInterval(loadDevices, 2000);
+    return () => window.clearInterval(interval);
   });
 
   const onClickLogout = () => {
@@ -117,7 +126,12 @@
                 </svg>
               </div>
               <div class="device-details">
-                <h3 class="device-name">{device.name}</h3>
+                <h3 class="device-name">
+                  <span class="connection-status" class:connected={device.connected}
+                        role="img" aria-label={device.connected ? 'Agent connected' : 'Agent disconnected'}
+                        title={device.connected ? 'Agent connected' : 'Agent disconnected'}></span>
+                  <span class="name-text">{device.name}</span>
+                </h3>
                 <p class="device-mac">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
@@ -339,13 +353,30 @@
       min-width: 0;
 
       .device-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-size: 18px;
         font-weight: bold;
         color: var(--color-black);
         margin: 0 0 6px 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        .connection-status {
+          width: 10px;
+          height: 10px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          background: #dc2626;
+
+          &.connected {
+            background: #16a34a;
+          }
+        }
+
+        .name-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
       }
 
       .device-mac {

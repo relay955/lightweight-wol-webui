@@ -12,5 +12,6 @@ interface GetDeviceRes {
   ip: string;
   order_num: number;
   authkey: string;
+  connected: boolean;
 }
 
