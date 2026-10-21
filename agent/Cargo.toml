@@ -1,0 +1,17 @@
+[package]
+name = "lightweight-wol-agent"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+futures-util = { version = "0.3", features = ["sink"] }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time"] }
+tokio-tungstenite = { version = "0.28", features = ["native-tls"] }
+toml = "0.8"
+tray-item = "0.10.0"
+url = "2"
+windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }
+
+[build-dependencies]
+winres = "0.1.12"

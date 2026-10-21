@@ -1,0 +1,5 @@
+[server]
+url = "wss://wol.example.com/api/agent/connect"
+# Device token only. Leave empty while testing a server without authentication.
+token = ""
+reconnect_seconds = 5
