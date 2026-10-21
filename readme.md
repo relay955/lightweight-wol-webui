@@ -16,8 +16,9 @@ default port is 25533(http://localhost:25533).
 Port number can be modified in the configuration file (Rocket.toml) if needed.
 
 ### Windows Agent
-The standalone Rust tray agent lives in [agent/](agent/README.md).
-It connects to a configured WSS endpoint and displays its target and connection status in the tray menu.
+The standalone Rust Windows service agent lives in [agent/](agent/README.md).
+It connects to a configured WSS endpoint without a tray icon or an interactive login.
+See the agent guide for service registration, removal and logging.
 
 ### Caution
 This program is designed to be used through a reverse-proxy when accessed from outside.  

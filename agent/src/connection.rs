@@ -1,31 +1,25 @@
-use std::{sync::mpsc::Sender, time::Duration};
+use std::time::Duration;
 use futures_util::{SinkExt, StreamExt};
 use tokio::time::{self, Instant, MissedTickBehavior};
 use tokio_tungstenite::{connect_async, tungstenite::{client::IntoClientRequest,
     http::{header::AUTHORIZATION, HeaderValue}, Message}};
 use crate::config::{AgentResult, ServerConfig};
 
-pub enum TrayEvent {
-    Status(String),
-    Quit,
-}
-
 /// 연결 실패 또는 종료 후 지정된 간격으로 다시 연결합니다.
-pub async fn run(config: ServerConfig, events: Sender<TrayEvent>) {
+pub async fn run(config: ServerConfig) {
     loop {
-        if events.send(TrayEvent::Status("연결 중".into())).is_err() { return; }
-        let reason = match connect_and_listen(&config, &events).await {
+        let reason = match connect_and_listen(&config).await {
             Ok(()) => "서버 연결 종료",
             Err(_) => "접속 실패 또는 연결 끊김",
         };
         let status = format!("{reason} ({}초 후 재시도)", config.reconnect_seconds);
-        if events.send(TrayEvent::Status(status)).is_err() { return; }
+        crate::logging::write(&status);
         time::sleep(Duration::from_secs(config.reconnect_seconds)).await;
     }
 }
 
 /// 인증 헤더로 접속하고 Ping/Pong으로 연결 생존 여부를 확인합니다.
-async fn connect_and_listen(config: &ServerConfig, events: &Sender<TrayEvent>) -> AgentResult<()> {
+async fn connect_and_listen(config: &ServerConfig) -> AgentResult<()> {
     let mut request = config.url.as_str().into_client_request()?;
     if !config.token.is_empty() {
         let mut token = HeaderValue::from_str(&format!("Bearer {}", config.token))?;
@@ -33,7 +27,7 @@ async fn connect_and_listen(config: &ServerConfig, events: &Sender<TrayEvent>) -
         request.headers_mut().insert(AUTHORIZATION, token);
     }
     let (mut socket, _) = time::timeout(Duration::from_secs(10), connect_async(request)).await??;
-    events.send(TrayEvent::Status("연결됨".into()))?;
+    crate::logging::write("서버 연결됨");
     let mut heartbeat = time::interval(Duration::from_secs(30));
     heartbeat.set_missed_tick_behavior(MissedTickBehavior::Delay);
     let mut last_pong = Instant::now();
@@ -85,7 +79,6 @@ async fn connect_and_listen(config: &ServerConfig, events: &Sender<TrayEvent>) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::mpsc;
     use tokio::net::TcpListener;
     use tokio_tungstenite::tungstenite;
 
@@ -113,11 +106,9 @@ mod tests {
             }
             socket.close(None).await.unwrap();
         });
-        let (events, receiver) = mpsc::channel();
-        time::timeout(Duration::from_secs(5), connect_and_listen(&config, &events))
+        time::timeout(Duration::from_secs(5), connect_and_listen(&config))
             .await.unwrap().unwrap();
         server.await.unwrap();
-        assert!(matches!(receiver.try_recv().unwrap(), TrayEvent::Status(status) if status == "연결됨"));
     }
 
     #[tokio::test]
@@ -142,14 +133,9 @@ mod tests {
                 socket.close(None).await.unwrap();
             }
         });
-        let (events, receiver) = mpsc::channel();
-        let client = tokio::spawn(run(config, events));
+        let client = tokio::spawn(run(config));
         let result = time::timeout(Duration::from_secs(5), server).await;
         client.abort();
         result.unwrap().unwrap();
-        let connected = receiver.try_iter().filter(|event| {
-            matches!(event, TrayEvent::Status(status) if status == "연결됨")
-        }).count();
-        assert_eq!(connected, 2);
     }
 }
