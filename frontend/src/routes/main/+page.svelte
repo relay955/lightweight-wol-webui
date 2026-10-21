@@ -469,6 +469,17 @@
     .devices-list {
       grid-template-columns: 1fr;
       gap: 16px;
+
+      .device-details {
+        .device-authkey {
+          display: none;
+        }
+
+        .device-wol-actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
     }
 
     .device-card {
@@ -477,22 +488,10 @@
   }
 
   @media (max-width: 480px) {
-    .device-card {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .device-info {
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
-
-    .device-wol-actions {
-      width: 100%;
-
-      .action-button {
-        width: 100%;
+    .devices-list {
+      .device-card {
+        flex-direction: column;
+        align-items: stretch;
       }
     }
 
