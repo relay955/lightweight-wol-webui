@@ -1,6 +1,5 @@
 use rocket::serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use crate::db::is_exist_tables;
 
 #[derive(Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct User{

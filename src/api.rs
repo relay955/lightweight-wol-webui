@@ -4,6 +4,7 @@ use crate::error::SystemError;
 pub mod user_api;
 pub mod catcher;
 pub mod device_api;
+pub mod agent_api;
 
 /// 밸리데이션을 수행하고 에러 메시지를 포맷팅하는 헬퍼 함수
 fn validate_request<T: Validate>(data: &T) -> Result<(), SystemError> {

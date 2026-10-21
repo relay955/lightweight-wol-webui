@@ -11,5 +11,6 @@ interface GetDeviceRes {
   mac: string;
   ip: string;
   order_num: number;
+  authkey: string;
 }
 

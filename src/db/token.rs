@@ -1,6 +1,5 @@
 use rocket::serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use crate::db::is_exist_tables;
 use crate::db::user::User;
 
 #[derive(Serialize, Deserialize, Clone, sqlx::FromRow)]

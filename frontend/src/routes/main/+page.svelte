@@ -9,6 +9,12 @@
   let devices: GetDeviceRes[] = $state([]);
   let isLoading = $state(true);
 
+  const copyAuthkey = (authkey: string) => showToastOnError(async () => {
+    if (!navigator.clipboard) throw new Error('Clipboard requires HTTPS or localhost.');
+    await navigator.clipboard.writeText(authkey);
+    toast.push('Auth key copied.');
+  })();
+
   // 장치 목록 불러오기
   const loadDevices = showToastOnError(async () => {
     isLoading = true;
@@ -111,6 +117,16 @@
                   </svg>
                   {device.mac} {device.ip !== "" ?`(${device.ip})` : ""}
                 </p>
+                <button class="device-authkey" onclick={() => copyAuthkey(device.authkey)}
+                        aria-label={`Copy auth key for ${device.name}`} title="Hover to reveal, click to copy">
+                  <span>Auth key:</span>
+                  <span class="masked-key" aria-hidden="true">
+                    {device.authkey.slice(0, Math.ceil(device.authkey.length / 2))}{'*'.repeat(
+                      Math.floor(device.authkey.length / 2)
+                    )}
+                  </span>
+                  <span class="full-key" aria-hidden="true">{device.authkey}</span>
+                </button>
                 <div class="device-wol-actions">
                   <button class="action-button small" aria-label="Wake Device" title="Wake Device" onclick={() => wakeDevice(device.id)}>
                     WAKE UP
@@ -336,6 +352,31 @@
         display: flex;
         gap: 8px;
         margin-top: 3px;
+      }
+
+      .device-authkey {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-width: 100%;
+        padding: 6px 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-dark-gray);
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        text-align: left;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+
+        .masked-key, .full-key { min-width: 0; }
+        .full-key { display: none; }
+
+        &:hover, &:focus-visible {
+          color: var(--color-black);
+          .masked-key { display: none; }
+          .full-key { display: inline; }
+        }
       }
     }
 

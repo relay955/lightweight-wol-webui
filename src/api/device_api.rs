@@ -9,7 +9,7 @@ use std::net::UdpSocket;
 use crate::api::validate_request;
 use crate::module::auth::AuthUser;
 use crate::db::Db;
-use crate::db::device::{Device, DeviceOperations, MoveDirection};
+use crate::db::device::{Device, DeviceOperations, MoveDirection, generate_authkey};
 use crate::error::{PredefinedApiError, SystemError};
 use crate::config::WolConfig;
 use crate::module::magic_packet::send_magic_packet;
@@ -38,6 +38,7 @@ pub struct GetDeviceRes {
     pub mac: String,
     pub ip: String,   
     pub order_num: i64,
+    pub authkey: String,
 }
 
 #[get("/devices")]
@@ -51,6 +52,7 @@ pub async fn get_devices(db: &Db, _auth: AuthUser) -> Result<Json<Vec<GetDeviceR
             mac: device.mac,
             ip: device.ip,       
             order_num: device.order_num,
+            authkey: device.authkey,
         });
     }
     Ok(Json(device_list))
@@ -67,6 +69,7 @@ pub async fn get_device(db: &Db, _auth: AuthUser, id: i64) -> Result<Json<GetDev
         mac: device.mac,
         ip: device.ip,       
         order_num: device.order_num,
+        authkey: device.authkey,
     };
     
     Ok(Json(device_res))
@@ -96,6 +99,7 @@ pub async fn create_device(db: &Db, _auth: AuthUser, req: Json<PostDeviceReq>,
         mac: req.mac.clone(),
         ip: req.ip.to_string(),       
         order_num: max_order + 1,
+        authkey: generate_authkey(),
     };
     Device::insert(db,&device).await?;
     Ok(Status::Ok)

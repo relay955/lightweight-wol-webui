@@ -1,5 +1,13 @@
 use rocket::serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+use rand_core::{OsRng, RngCore};
+
+/// OS 난수로 256비트 기기 인증 키를 생성합니다.
+pub fn generate_authkey() -> String {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
 
 #[derive(Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Device {
@@ -8,6 +16,7 @@ pub struct Device {
     pub mac: String,
     pub ip: String,
     pub order_num: i64,
+    pub authkey: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,11 +57,14 @@ impl DeviceOperations for Device {
     }
 
     async fn insert(pool: &SqlitePool, device: &Device) -> Result<Device, sqlx::Error> {
-        let result = sqlx::query("INSERT INTO device (name, mac, ip, order_num) VALUES (?, ?, ?, ?)")
+        let result = sqlx::query(
+            "INSERT INTO device (name, mac, ip, order_num, authkey) VALUES (?, ?, ?, ?, ?)"
+        )
             .bind(&device.name)
             .bind(&device.mac)
             .bind(&device.ip)           
             .bind(device.order_num)
+            .bind(&device.authkey)
             .execute(pool)
             .await?;
 
@@ -64,6 +76,7 @@ impl DeviceOperations for Device {
             mac: device.mac.clone(),
             ip: device.ip.clone(),
             order_num: device.order_num,
+            authkey: device.authkey.clone(),
         })
     }
 

@@ -20,7 +20,7 @@ use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_db_pools::Database;
 use tray_item::{IconSource, TrayItem};
 use crate::config::{CorsConfig, JwtConfig, WolConfig};
-use crate::db::{create_tables, is_exist_tables, Db};
+use crate::db::{migration::migrate, Db};
 use crate::module::jwt::generate_random_secret;
 
 fn update_secret_in_config(secret: &str) -> std::io::Result<()> {
@@ -71,6 +71,7 @@ fn build_rocket() -> rocket::Rocket<rocket::Build> {
             api::device_api::update_device, api::device_api::delete_device,
             api::device_api::move_device, api::device_api::get_device,
             api::device_api::wake_device,
+            api::agent_api::connect,
         ])
         .register("/", catchers![api::catcher::unauthorized, api::catcher::not_found])
         .attach(Db::init()) // DB 풀 초기화
@@ -79,18 +80,10 @@ fn build_rocket() -> rocket::Rocket<rocket::Build> {
                 Some(db) => db,
                 None => return Err(rocket)
             };
-            match is_exist_tables(&db).await {
-                Ok(exist) => if exist {
-                    println!("DB Already created.");
-                    return Ok(rocket) 
-                },
-                Err(_) => return Err(rocket) 
+            if let Err(error) = migrate(&db.0).await {
+                eprintln!("DB migration failed: {error}");
+                return Err(rocket);
             }
-            
-            if let Err(e) = create_tables(&db).await {
-                return Err(rocket)
-            }
-            println!("DB created.");
             Ok(rocket)
         }))
         .attach(cors)
