@@ -2,6 +2,16 @@ use rocket::{http::Status, request::{FromRequest, Outcome}, Request};
 use rocket::futures::{SinkExt, StreamExt};
 use rocket_db_pools::Database;
 use crate::db::Db;
+use crate::module::agent::AgentConnections;
+use rocket::{State, tokio::time::{timeout, Duration, Instant}};
+
+#[derive(serde::Deserialize)]
+struct CommandResult {
+    r#type: String,
+    id: String,
+    success: bool,
+    error: Option<String>,
+}
 
 pub struct AuthDevice(pub i64);
 
@@ -43,7 +53,7 @@ mod tests {
         let figment = rocket::Config::figment()
             .merge(("databases.sqlite.url", "sqlite::memory:"))
             .merge(("databases.sqlite.max_connections", 1));
-        let app = rocket::custom(figment).attach(Db::init())
+        let app = rocket::custom(figment).manage(AgentConnections::default()).attach(Db::init())
             .attach(AdHoc::try_on_ignite("Migrate test DB", |rocket| async {
                 migrate(&Db::fetch(&rocket).unwrap().0).await.unwrap();
                 Ok(rocket)
@@ -85,7 +95,9 @@ mod tests {
             .merge(("address", "127.0.0.1"))
             .merge(("databases.sqlite.url", "sqlite::memory:"))
             .merge(("databases.sqlite.max_connections", 1));
-        let app = rocket::custom(figment).attach(Db::init())
+        let agents = AgentConnections::default();
+        let requests = agents.clone();
+        let app = rocket::custom(figment).manage(agents).attach(Db::init())
             .attach(AdHoc::try_on_ignite("Seed test device", move |rocket| async move {
                 let db = Db::fetch(&rocket).unwrap();
                 migrate(&db.0).await.unwrap();
@@ -107,6 +119,16 @@ mod tests {
             assert_eq!(response.status().as_u16(), 101);
             socket.send(Message::Ping(b"health".to_vec())).await.unwrap();
             assert_eq!(socket.next().await.unwrap().unwrap(), Message::Pong(b"health".to_vec()));
+            let command_request = rocket::tokio::spawn(async move { requests.shutdown(1).await });
+            let Message::Text(command) = socket.next().await.unwrap().unwrap() else {
+                panic!("Expected shutdown command");
+            };
+            let command: serde_json::Value = serde_json::from_str(&command).unwrap();
+            assert_eq!(command["type"], "shutdown");
+            socket.send(Message::Text(serde_json::json!({
+                "type": "command_result", "id": command["id"], "success": true
+            }).to_string())).await.unwrap();
+            command_request.await.unwrap().unwrap();
             socket.close(None).await.unwrap();
             assert!(matches!(socket.next().await.unwrap().unwrap(), Message::Close(_)));
         }).await;
@@ -118,21 +140,58 @@ mod tests {
 
 /// 인증된 에이전트의 연결을 유지하고 Ping과 Close에 응답합니다.
 #[get("/agent/connect")]
-pub fn connect(auth: AuthDevice, ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
+pub fn connect(auth: AuthDevice, ws: rocket_ws::WebSocket, agents: &State<AgentConnections>)
+    -> rocket_ws::Channel<'static> {
+    let agents = agents.inner().clone();
     ws.config(rocket_ws::Config {
         max_message_size: Some(64 * 1024), max_frame_size: Some(64 * 1024), ..Default::default()
     }).channel(move |mut stream| Box::pin(async move {
-        let _device_id = auth.0;
-        while let Ok(Some(message)) = rocket::tokio::time::timeout(
-            std::time::Duration::from_secs(90), stream.next()
-        ).await {
-            match message? {
-                rocket_ws::Message::Ping(_) => stream.flush().await?,
-                rocket_ws::Message::Close(_) => {
-                    stream.flush().await?;
-                    break;
+        let (_registration, mut commands) = agents.register(auth.0);
+        let mut pending: Option<crate::module::agent::ShutdownRequest> = None;
+        let mut last_message = Instant::now();
+        let mut heartbeat = rocket::tokio::time::interval(Duration::from_secs(1));
+        loop {
+            rocket::tokio::select! {
+                command = commands.recv() => {
+                    let Some(command) = command else { break; };
+                    if pending.is_some() {
+                        let _ = command.result.send(Err("다른 종료 요청을 처리 중입니다.".into()));
+                        continue;
+                    }
+                    let text = serde_json::to_string(&command.command).expect("Serializable command");
+                    let sent = timeout(Duration::from_secs(3), stream.send(rocket_ws::Message::Text(text)));
+                    match sent.await {
+                        Ok(result) => result?,
+                        Err(_) => break,
+                    }
+                    pending = Some(command);
                 }
-                _ => {},
+                message = stream.next() => {
+                    let Some(message) = message else { break; };
+                    last_message = Instant::now();
+                    match message? {
+                        rocket_ws::Message::Ping(_) => stream.flush().await?,
+                        rocket_ws::Message::Close(_) => { stream.flush().await?; break; }
+                        rocket_ws::Message::Text(text) => {
+                            let Ok(result) = serde_json::from_str::<CommandResult>(&text) else { continue; };
+                            if result.r#type != "command_result"
+                                || !pending.as_ref().is_some_and(|p| p.command.id == result.id) { continue; }
+                            let command = pending.take().unwrap();
+                            let result = if result.success { Ok(()) } else {
+                                Err(result.error.unwrap_or_else(|| "컴퓨터 종료 요청에 실패했습니다.".into()))
+                            };
+                            let _ = command.result.send(result);
+                        }
+                        _ => {},
+                    }
+                }
+                _ = heartbeat.tick() => {
+                    if last_message.elapsed() >= Duration::from_secs(90) { break; }
+                    if pending.as_ref().is_some_and(|p| p.command.expires_at < chrono::Utc::now().timestamp()) {
+                        let command = pending.take().unwrap();
+                        let _ = command.result.send(Err("에이전트 응답 시간이 초과되었습니다.".into()));
+                    }
+                }
             }
         }
         Ok(())

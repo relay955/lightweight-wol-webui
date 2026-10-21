@@ -37,6 +37,7 @@ async fn connect_and_listen(config: &ServerConfig, events: &Sender<TrayEvent>) -
     let mut heartbeat = time::interval(Duration::from_secs(30));
     heartbeat.set_missed_tick_behavior(MissedTickBehavior::Delay);
     let mut last_pong = Instant::now();
+    let mut shutdown_requested = false;
 
     loop {
         tokio::select! {
@@ -49,6 +50,20 @@ async fn connect_and_listen(config: &ServerConfig, events: &Sender<TrayEvent>) -
             }
             message = socket.next() => {
                 match message {
+                    Some(Ok(Message::Text(text))) => {
+                        let result = tokio::task::spawn_blocking(move || {
+                            crate::command::handle_message(&text, || {
+                                if shutdown_requested { return Err("이미 종료를 요청했습니다.".into()); }
+                                crate::command::shutdown_computer()
+                            })
+                        }).await?;
+                        if let Some(result) = result {
+                            shutdown_requested |= result.success;
+                            let response = serde_json::to_string(&result)?;
+                            time::timeout(Duration::from_secs(3), socket.send(Message::Text(response.into())))
+                                .await??;
+                        }
+                    }
                     Some(Ok(Message::Pong(_))) => last_pong = Instant::now(),
                     Some(Ok(Message::Ping(_))) => {
                         // tungstenite가 준비한 Pong 응답 전송

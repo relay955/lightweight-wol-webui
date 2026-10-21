@@ -2,6 +2,7 @@
 
 mod config;
 mod connection;
+mod command;
 
 use std::{sync::mpsc, time::Duration};
 use tokio::runtime::Runtime;

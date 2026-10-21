@@ -8,6 +8,7 @@
   
   let devices: GetDeviceRes[] = $state([]);
   let isLoading = $state(true);
+  let shutdownRequests: number[] = $state([]);
 
   const copyAuthkey = (authkey: string) => showToastOnError(async () => {
     if (!navigator.clipboard) throw new Error('Clipboard requires HTTPS or localhost.');
@@ -41,6 +42,13 @@
     await axios.post(`/device/wake/${id}`);
     toast.push('WOL packet sent.');
   })();
+
+  const shutdownDevice = (id: number) => showToastOnError(async () => {
+    if (shutdownRequests.includes(id)) return;
+    shutdownRequests = [...shutdownRequests, id];
+    await axios.post(`/device/shutdown/${id}`);
+    toast.push('컴퓨터 종료 요청이 수락되었습니다.');
+  }, () => shutdownRequests = shutdownRequests.filter(requestId => requestId !== id))();
 
   onMount(() => {
     loadDevices();
@@ -130,6 +138,11 @@
                 <div class="device-wol-actions">
                   <button class="action-button small" aria-label="Wake Device" title="Wake Device" onclick={() => wakeDevice(device.id)}>
                     WAKE UP
+                  </button>
+                  <button class="action-button small" aria-label="Shutdown Device"
+                          disabled={shutdownRequests.includes(device.id)}
+                          onclick={() => shutdownDevice(device.id)}>
+                    {shutdownRequests.includes(device.id) ? 'SENDING...' : 'SHUTDOWN'}
                   </button>
                 </div>
               </div>

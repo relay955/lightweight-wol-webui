@@ -1,3 +1,4 @@
+@echo off
 set FRONTEND_DIR=frontend
 set BUILD_DIR=frontend/static
 set DEST_DIR=static

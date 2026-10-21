@@ -13,6 +13,7 @@ use crate::db::device::{Device, DeviceOperations, MoveDirection, generate_authke
 use crate::error::{PredefinedApiError, SystemError};
 use crate::config::WolConfig;
 use crate::module::magic_packet::send_magic_packet;
+use crate::module::agent::AgentConnections;
 
 // MAC 주소 정규식 (일반적인 형식: AA:BB:CC:DD:EE:FF 또는 AA-BB-CC-DD-EE-FF)
 lazy_static::lazy_static! {
@@ -163,4 +164,31 @@ pub async fn wake_device(db: &Db, wol_config: &State<WolConfig>, _auth: AuthUser
 
     send_magic_packet(&device.mac, &wol_config.broadcast_ip)?;
     Ok(Status::Ok)
+}
+
+/// 로그인한 사용자의 장치 종료 요청을 연결된 에이전트에 전달합니다.
+#[post("/device/shutdown/<id>")]
+pub async fn shutdown_device(db: &Db, agents: &State<AgentConnections>, _auth: AuthUser, id: i64)
+    -> Result<Status, SystemError> {
+    Device::get(db, id).await?.ok_or(PredefinedApiError::NotFound.get())?;
+    agents.shutdown(id).await?;
+    Ok(Status::Ok)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[rocket::async_test]
+    async fn shutdown_reports_offline_agent() {
+        let db = Db(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        crate::db::migration::migrate(&db.0).await.unwrap();
+        sqlx::query("INSERT INTO device (name, mac, ip, order_num, authkey) VALUES ('test', '', '', 1, ?)")
+            .bind(generate_authkey()).execute(&db.0).await.unwrap();
+        let agents = AgentConnections::default();
+        let user = AuthUser { id: 1, user_name: "test".into() };
+        let error = shutdown_device(&db, State::from(&agents), user, 1).await.unwrap_err();
+        assert!(matches!(error, SystemError::APIError(503, _, message)
+            if message.contains("연결되어 있지 않습니다")));
+    }
 }
