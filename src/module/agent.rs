@@ -7,7 +7,6 @@ use crate::error::SystemError;
 pub struct ShutdownCommand {
     pub r#type: &'static str,
     pub id: String,
-    pub expires_at: i64,
 }
 
 pub struct ShutdownRequest {
@@ -45,7 +44,6 @@ impl AgentConnections {
         let (result, receiver) = oneshot::channel();
         let command = ShutdownCommand {
             r#type: "shutdown", id: uuid::Uuid::new_v4().to_string(),
-            expires_at: chrono::Utc::now().timestamp() + 5,
         };
         sender.try_send(ShutdownRequest { command, result })
             .map_err(|_| agent_error("에이전트 연결이 끊겼거나 다른 요청을 처리 중입니다."))?;
@@ -83,7 +81,6 @@ mod tests {
         let response = rocket::tokio::spawn(async move {
             let request = receiver.recv().await.unwrap();
             assert_eq!(request.command.r#type, "shutdown");
-            assert!(request.command.expires_at > chrono::Utc::now().timestamp());
             request.result.send(Ok(())).unwrap();
         });
         connections.shutdown(1).await.unwrap();

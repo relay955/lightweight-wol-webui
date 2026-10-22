@@ -187,10 +187,7 @@ pub fn connect(auth: AuthDevice, ws: rocket_ws::WebSocket, agents: &State<AgentC
                 }
                 _ = heartbeat.tick() => {
                     if last_message.elapsed() >= Duration::from_secs(90) { break; }
-                    if pending.as_ref().is_some_and(|p| p.command.expires_at < chrono::Utc::now().timestamp()) {
-                        let command = pending.take().unwrap();
-                        let _ = command.result.send(Err("에이전트 응답 시간이 초과되었습니다.".into()));
-                    }
+                    if pending.as_ref().is_some_and(|p| p.result.is_closed()) { pending = None; }
                 }
             }
         }
